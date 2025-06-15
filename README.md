@@ -1,4 +1,6 @@
-# CI Board 项目文档 - 优化版
+![CI/CD](https://github.com/Xuehua-Meaw/ci_board/actions/workflows/ci_board_CICD.yml/badge.svg)
+
+# CI Board 项目文档 - 优化版喵
 
 > 杂鱼♡～本喵为杂鱼主人精简的实用项目文档喵～
 
