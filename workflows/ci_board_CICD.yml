@@ -95,6 +95,10 @@ jobs:
     # 杂鱼♡～本喵测试一下包能否正常安装喵～
     runs-on: windows-latest  # 杂鱼♡～在Windows上测试安装喵～
     needs: build
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: 1
+      LANG: en_US.UTF-8
     
     steps:
     - name: Download build artifacts
@@ -115,7 +119,7 @@ jobs:
         # 杂鱼♡～安装构建的wheel包喵～
         pip install (Get-ChildItem dist/*.whl | Select-Object -First 1).FullName
         # 杂鱼♡～测试导入喵～
-        python -c "import ci_board; print('杂鱼♡～ci_board导入成功喵～')"
+        python -c "import ci_board; print('ci_board import successful')"
 
   publish:
     # 杂鱼♡～本喵要发布到PyPI喵～（仅在main分支和tag时）
