@@ -1,18 +1,20 @@
 # 杂鱼♡～本喵的懒人API使用示例喵～
-import sys
 import os
+import sys
+import time
+
+# 杂鱼♡～杂鱼主人的路径设置，本喵勉强帮你修复了喵～
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from ci_board import create_monitor
-import time
 
 def on_text_change(text, source_info=None):
     """杂鱼♡～文本变化回调函数（支持源信息）喵～"""
-    print(f"杂鱼♡～检测到文本变化喵：")
-    print(f"{"-"*50}")
+    print("杂鱼♡～检测到文本变化喵：")
+    print(f"{'-'*50}")
     print(f"{text}")
-    print(f"{"-"*50}")
-    
+    print(f"{'-'*50}")
+
     # 杂鱼♡～显示源应用程序信息喵～
     if source_info:
         print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
@@ -22,20 +24,20 @@ def on_text_change(text, source_info=None):
             print(f"  窗口标题：{source_info['window_title']}")
         if source_info.get('process_id'):
             print(f"  进程ID：{source_info['process_id']}")
-    
+
     print("-" * 50)
 
 def on_image_change(data, source_info=None):
     """杂鱼♡～图片变化回调函数（支持源信息）喵～"""
     # print("杂鱼♡～检测到图片变化喵～")
     # print(f"数据类型：{type(data)}")
-    
+
     if isinstance(data, dict):
         if 'format' in data and data['format'] == 'BMP':
             # 杂鱼♡～这是BMP格式数据喵～
             # print(f"杂鱼♡～BMP格式图片：{data['size'][0]}x{data['size'][1]}喵～")
             # print(f"杂鱼♡～BMP数据大小：{len(data['data'])}字节喵～")
-            
+
             try:
                 from PIL import Image
                 import io
@@ -44,7 +46,7 @@ def on_image_change(data, source_info=None):
                 image.show()
             except Exception as e:
                 print(f"杂鱼♡～PIL打开失败喵：{e}")
-                
+
         elif 'type' in data and data['type'] in ['DIB', 'BITMAP']:
             # 杂鱼♡～这是原始数据，说明BMP转换失败了喵～
             print(f"杂鱼♡～收到原始{data['type']}数据，BMP转换可能失败了喵～")
@@ -53,7 +55,7 @@ def on_image_change(data, source_info=None):
             print(f"杂鱼♡～未知数据格式喵～键：{list(data.keys()) if isinstance(data, dict) else 'N/A'}")
     else:
         print(f"杂鱼♡～意外的数据类型：{type(data)}喵～")
-    
+
     # 杂鱼♡～显示源应用程序信息喵～
     if source_info:
         print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
@@ -61,14 +63,13 @@ def on_image_change(data, source_info=None):
             print(f"  程序路径：{source_info['process_path']}")
         if source_info.get('window_title'):
             print(f"  窗口标题：{source_info['window_title']}")
-    
-    print("-" * 50)
 
+    print("-" * 50)
 
 def on_files_change(files, source_info=None):
     """杂鱼♡～文件变化回调函数（支持源信息）喵～"""
     print(f"杂鱼♡～检测到文件变化喵：{files}")
-    
+
     # 杂鱼♡～显示源应用程序信息喵～
     if source_info:
         print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
@@ -82,7 +83,7 @@ def on_clipboard_update(data, source_info=None):
     content_type, content = data
     print(f"杂鱼♡～剪贴板内容更新了喵～类型：{content_type}")
     print(f"杂鱼♡～剪贴板内容：{content}")
-    
+
     # 杂鱼♡～显示源应用程序信息喵～
     if source_info:
         print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
@@ -99,42 +100,42 @@ if __name__ == "__main__":
     print("  - 本喵会自动创建对应的处理器")
     print("  - 按Ctrl+C结束测试")
     print("=" * 60)
-    
+
     # 杂鱼♡～创建监控器喵～
     monitor = create_monitor()
-    
+
     # 杂鱼♡～懒人方式：直接传入回调函数喵～
     print("杂鱼♡～使用懒人API注册处理器喵～")
-    
+
     text_handler = monitor.add_handler('text', on_text_change)
-    image_handler = monitor.add_handler('image', on_image_change) 
+    image_handler = monitor.add_handler('image', on_image_change)
     files_handler = monitor.add_handler('files', on_files_change)
     # update_handler = monitor.add_handler('update', on_clipboard_update)
-    
-    print(f"杂鱼♡～自动创建的处理器类型：")
+
+    print("杂鱼♡～自动创建的处理器类型：")
     print(f"  文本处理器：{type(text_handler).__name__}")
     print(f"  图片处理器：{type(image_handler).__name__}")
     print(f"  文件处理器：{type(files_handler).__name__}")
     # print(f"  更新处理器：{type(update_handler).__name__}")
-    
+
     # 杂鱼♡～懒人还可以对自动创建的处理器进行配置喵～
     print("杂鱼♡～懒人也可以配置自动创建的处理器喵～")
-    
+
     try:
         print("杂鱼♡～懒人监控器启动中...请稍等喵～")
         if monitor.start():
             time.sleep(1)
             print("杂鱼♡～懒人可以开始复制内容测试了喵～")
-            
+
             # 杂鱼♡～显示监控器状态喵～
             status = monitor.get_status()
             print(f"杂鱼♡～懒人监控器状态：{status}")
-            
+
             # 杂鱼♡～等待剪贴板变化喵～
             monitor.wait()
         else:
             print("杂鱼♡～启动监控器失败了喵！")
-        
+
     except KeyboardInterrupt:
         print("\n" + "=" * 60)
         print("杂鱼♡～懒人演示结束了喵～")
@@ -148,14 +149,14 @@ if __name__ == "__main__":
 """
 传统方式（非懒人）：
     from clipboard_package import create_monitor, create_text_handler
-    
+
     monitor = create_monitor()
     text_handler = create_text_handler(callback_function)
     monitor.add_handler('text', text_handler)
 
 懒人方式：
     from clipboard_package import create_monitor
-    
+
     monitor = create_monitor()
     text_handler = monitor.add_handler('text', callback_function)  # 杂鱼♡～一步到位喵～
-""" 
+"""
