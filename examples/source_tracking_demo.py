@@ -15,6 +15,7 @@ from ci_board.handlers.image_handler import SourceApplicationImageFilter
 from ci_board.handlers.file_handler import SourceApplicationFileFilter
 import time
 
+
 def advanced_text_callback(text, source_info=None):
     """杂鱼♡～高级文本回调函数，展示源追踪功能喵～"""
     print("\n" + "="*60)
@@ -51,6 +52,7 @@ def advanced_text_callback(text, source_info=None):
 
     print("="*60)
 
+
 def advanced_image_callback(data: BMPData, source_info=None):
     """杂鱼♡～高级图片回调函数，展示源追踪功能喵～"""
     print("\n" + "="*60)
@@ -63,8 +65,7 @@ def advanced_image_callback(data: BMPData, source_info=None):
         print(f"🎨 位深度：{data.bit_count} 位")
         print(f"💾 文件大小：{len(data.data)} 字节")
     else:
-        print(f"❌ 图片数据无效")
-
+        print("❌ 图片数据无效")
 
     # 杂鱼♡～详细显示源应用程序信息喵～
     if source_info:
@@ -92,6 +93,7 @@ def advanced_image_callback(data: BMPData, source_info=None):
         print("\n❌ 未获取到源应用程序信息")
 
     print("="*60)
+
 
 def advanced_file_callback(files, source_info=None):
     """杂鱼♡～高级文件回调函数，展示源追踪功能喵～"""
@@ -130,8 +132,8 @@ def advanced_file_callback(files, source_info=None):
             print(f"  ❌ 错误：{source_info['error']}")
     else:
         print("\n❌ 未获取到源应用程序信息")
-
     print("="*60)
+
 
 def setup_source_filters():
     """杂鱼♡～设置源应用程序过滤器的示例喵～"""
@@ -153,6 +155,7 @@ def setup_source_filters():
     )
 
     return editor_only_filter, no_browser_images_filter, file_manager_only_filter
+
 
 def demonstrate_source_info():
     """杂鱼♡～演示如何获取当前剪贴板的源信息喵～"""
@@ -195,6 +198,7 @@ def demonstrate_source_info():
         print(f"❌ 获取信息时出错：{e}")
 
     print("🔍"*30)
+
 
 if __name__ == "__main__":
     print("🚀" + "="*58 + "🚀")

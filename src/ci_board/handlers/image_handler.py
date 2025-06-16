@@ -57,24 +57,24 @@ class ImageHandler(BaseClipboardHandler):
         if data is None:
             # 杂鱼♡～数据为None，直接返回，不调用回调喵～
             return
-            
+
         if not self.is_valid(data):
             return
 
         if not self._apply_filters(data):
             return
-        
+
         # 杂鱼♡～将原始数据赋值给BMPData喵～
         bData.data = data
 
         # 杂鱼♡～转换为BMP格式数据喵～
         try:
             processed_data = self._convert_to_bmp_format(bData)
-            
+
             # 杂鱼♡～如果转换失败，不调用回调函数喵～
             if not processed_data or (hasattr(processed_data, 'success') and not processed_data.success):
                 return
-                
+
         except Exception as e:
             print(f"杂鱼♡～BMP转换过程出错喵：{e}")
             return
@@ -143,7 +143,6 @@ class ImageHandler(BaseClipboardHandler):
         else:
             print("杂鱼♡～BMP转换失败，返回原始数据喵～")
             return
-
 
         # 杂鱼♡～显示源应用程序信息喵～
         if source_info and self._include_source_info:

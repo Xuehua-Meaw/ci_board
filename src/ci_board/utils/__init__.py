@@ -31,8 +31,7 @@ __all__ = [
     "ClipboardAccessDenied",
     # 杂鱼♡～日志系统喵～
     "NekoLogger",
-    "ComponentLogger", 
-    "LogLevel",
+    "ComponentLogger",    "LogLevel",
     "setup_ci_board_logging",
     "get_component_logger",
 ]

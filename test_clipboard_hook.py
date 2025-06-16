@@ -21,7 +21,7 @@ psapi = ctypes.WinDLL('psapi')
 
 # 杂鱼♡～消息常量喵～
 WM_CLIPBOARDUPDATE = 0x031D
-WM_QUIT = 0x0012 # 杂鱼♡～我们需要这个来优雅地退出喵～
+WM_QUIT = 0x0012  # 杂鱼♡～我们需要这个来优雅地退出喵～
 
 # 杂鱼♡～窗口事件常量喵～
 EVENT_SYSTEM_FOREGROUND = 0x0003
@@ -69,8 +69,23 @@ user32.GetWindowTextLengthW.argtypes = [w.HWND]
 user32.GetWindowTextLengthW.restype = ctypes.c_int
 user32.GetClassNameW.argtypes = [w.HWND, w.LPWSTR, ctypes.c_int]
 user32.GetClassNameW.restype = ctypes.c_int
-WINEVENTPROC = ctypes.WINFUNCTYPE(None, w.HANDLE, w.DWORD, w.HWND, w.LONG, w.LONG, w.DWORD, w.DWORD)
-user32.SetWinEventHook.argtypes = [w.DWORD, w.DWORD, w.HANDLE, WINEVENTPROC, w.DWORD, w.DWORD, w.DWORD]
+WINEVENTPROC = ctypes.WINFUNCTYPE(
+    None,
+    w.HANDLE,
+    w.DWORD,
+    w.HWND,
+    w.LONG,
+    w.LONG,
+    w.DWORD,
+    w.DWORD)
+user32.SetWinEventHook.argtypes = [
+    w.DWORD,
+    w.DWORD,
+    w.HANDLE,
+    WINEVENTPROC,
+    w.DWORD,
+    w.DWORD,
+    w.DWORD]
 user32.SetWinEventHook.restype = w.HANDLE
 user32.UnhookWinEvent.argtypes = [w.HANDLE]
 user32.UnhookWinEvent.restype = w.BOOL
@@ -92,7 +107,8 @@ kernel32.OpenProcess.argtypes = [w.DWORD, w.BOOL, w.DWORD]
 kernel32.OpenProcess.restype = w.HANDLE
 kernel32.CloseHandle.argtypes = [w.HANDLE]
 kernel32.CloseHandle.restype = w.BOOL
-kernel32.QueryFullProcessImageNameW.argtypes = [w.HANDLE, w.DWORD, w.LPWSTR, ctypes.POINTER(w.DWORD)]
+kernel32.QueryFullProcessImageNameW.argtypes = [
+    w.HANDLE, w.DWORD, w.LPWSTR, ctypes.POINTER(w.DWORD)]
 kernel32.QueryFullProcessImageNameW.restype = w.BOOL
 kernel32.CreateToolhelp32Snapshot.argtypes = [w.DWORD, w.DWORD]
 kernel32.CreateToolhelp32Snapshot.restype = w.HANDLE
@@ -111,6 +127,8 @@ TH32CS_SNAPPROCESS = 0x00000002
 GW_HWNDPREV = 3
 
 # 杂鱼♡～进程信息结构体喵～
+
+
 class PROCESSENTRY32W(ctypes.Structure):
     _fields_ = [
         ('dwSize', w.DWORD), ('cntUsage', w.DWORD), ('th32ProcessID', w.DWORD),
@@ -118,6 +136,7 @@ class PROCESSENTRY32W(ctypes.Structure):
         ('cntThreads', w.DWORD), ('th32ParentProcessID', w.DWORD),
         ('pcPriClassBase', w.LONG), ('dwFlags', w.DWORD), ('szExeFile', w.WCHAR * 260)
     ]
+
 
 # 杂鱼♡～全局变量喵～
 message_count = 0
@@ -135,7 +154,16 @@ SYSTEM_PROCESSES = {
 }
 
 # 杂鱼♡～以下是回调和工具函数，保持不变喵～
-def winevent_proc(hWinEventHook, event, hwnd, idObject, idChild, dwEventThread, dwmsEventTime):
+
+
+def winevent_proc(
+        hWinEventHook,
+        event,
+        hwnd,
+        idObject,
+        idChild,
+        dwEventThread,
+        dwmsEventTime):
     """杂鱼♡～窗口事件钩子回调函数喵～"""
     global current_focus_info, focus_history
     if event == EVENT_SYSTEM_FOREGROUND and hwnd:
@@ -144,31 +172,39 @@ def winevent_proc(hWinEventHook, event, hwnd, idObject, idChild, dwEventThread, 
             if isinstance(window_info, dict):
                 if (window_info['exe_info']['name'].lower() not in SYSTEM_PROCESSES and
                     window_info['title'] != "杂鱼♡～无标题" and
-                    len(window_info['title'].strip()) > 0):
+                        len(window_info['title'].strip()) > 0):
                     with focus_lock:
                         current_focus_info = window_info.copy()
                         current_focus_info['focus_time'] = time.time()
-                        focus_history = [f for f in focus_history if f['exe_info']['name'].lower() != window_info['exe_info']['name'].lower()]
+                        focus_history = [f for f in focus_history if f['exe_info']['name'].lower(
+                        ) != window_info['exe_info']['name'].lower()]
                         focus_history.insert(0, current_focus_info)
                         focus_history = focus_history[:10]
         except Exception:
             pass
 
+
 def get_process_path(process_id):
     """杂鱼♡～获取进程路径信息喵～"""
     try:
-        process_handle = kernel32.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, False, process_id)
+        process_handle = kernel32.OpenProcess(
+            PROCESS_QUERY_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION,
+            False,
+            process_id)
         if not process_handle:
-            process_handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, process_id)
+            process_handle = kernel32.OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION, False, process_id)
         if not process_handle:
             return {'name': f'PID:{process_id}', 'path': '杂鱼♡～无法打开进程'}
         try:
             path_buffer = ctypes.create_unicode_buffer(1024)
             path_size = w.DWORD(1024)
-            if kernel32.QueryFullProcessImageNameW(process_handle, 0, path_buffer, ctypes.byref(path_size)):
+            if kernel32.QueryFullProcessImageNameW(
+                    process_handle, 0, path_buffer, ctypes.byref(path_size)):
                 exe_path = path_buffer.value
             else:
-                if psapi.GetModuleFileNameExW(process_handle, None, path_buffer, 1024):
+                if psapi.GetModuleFileNameExW(
+                        process_handle, None, path_buffer, 1024):
                     exe_path = path_buffer.value
                 else:
                     return {'name': f'PID:{process_id}', 'path': '杂鱼♡～无法获取路径'}
@@ -177,6 +213,7 @@ def get_process_path(process_id):
             kernel32.CloseHandle(process_handle)
     except Exception as e:
         return {'name': f'PID:{process_id}', 'path': f'杂鱼♡～出错：{str(e)}'}
+
 
 def get_window_info(hwnd, description=""):
     """杂鱼♡～获取窗口详细信息的通用函数喵～"""
@@ -198,11 +235,15 @@ def get_window_info(hwnd, description=""):
         if not process_id.value:
             return f"杂鱼♡～{description}无法获取进程ID喵～"
         return {
-            'title': window_title, 'class': window_class, 'pid': process_id.value,
-            'exe_info': get_process_path(process_id.value), 'hwnd': hwnd
-        }
+            'title': window_title,
+            'class': window_class,
+            'pid': process_id.value,
+            'exe_info': get_process_path(
+                process_id.value),
+            'hwnd': hwnd}
     except Exception as e:
         return f"杂鱼♡～获取{description}窗口信息时出错喵～：{str(e)}"
+
 
 def get_smart_source_analysis():
     """杂鱼♡～智能源应用程序分析（结合焦点信息）喵～"""
@@ -211,14 +252,16 @@ def get_smart_source_analysis():
     with focus_lock:
         current_focus = current_focus_info.copy() if current_focus_info else None
         recent_focus = focus_history[:5] if focus_history else []
-    
+
     owner_hwnd = user32.GetClipboardOwner()
     owner_info = get_window_info(owner_hwnd, "剪贴板拥有者") if owner_hwnd else None
-    
+
     real_source, confidence = None, "未知"
-    
+
     if current_focus:
-        if isinstance(owner_info, dict) and current_focus['pid'] == owner_info['pid']:
+        if isinstance(
+                owner_info,
+                dict) and current_focus['pid'] == owner_info['pid']:
             real_source, confidence = current_focus, "高 (当前焦点 = 拥有者)"
         elif current_focus.get('focus_time', 0) > time.time() - 2:
             real_source, confidence = current_focus, "中 (最近获得焦点)"
@@ -227,7 +270,7 @@ def get_smart_source_analysis():
 
     if not real_source and isinstance(owner_info, dict):
         real_source, confidence = owner_info, "低 (仅基于拥有者)"
-    
+
     if not real_source and recent_focus:
         real_source, confidence = recent_focus[0], "低 (基于最近焦点历史)"
 
@@ -241,14 +284,16 @@ def get_smart_source_analysis():
 
 def get_clipboard_info():
     """杂鱼♡～获取剪贴板详细信息（安全版）喵～"""
-    if not user32.OpenClipboard(None): return "杂鱼♡～打开剪贴板失败喵！"
+    if not user32.OpenClipboard(None):
+        return "杂鱼♡～打开剪贴板失败喵！"
     info_lines = ["杂鱼♡～剪贴板内容分析喵～"]
     try:
         formats = []
         fmt = 0
         while True:
             fmt = user32.EnumClipboardFormats(fmt)
-            if fmt == 0: break
+            if fmt == 0:
+                break
             formats.append(fmt)
         info_lines.append(f"杂鱼♡～检测到 {len(formats)} 种数据格式喵～")
         for f in formats:
@@ -258,21 +303,22 @@ def get_clipboard_info():
                 if user32.GetClipboardFormatNameW(f, buf, 256) > 0:
                     name = f"自定义: {buf.value}"
                 else:
-                    name = f"未知/无名格式"
+                    name = "未知/无名格式"
             info_lines.append(f"  - {name} (ID: {f})")
 
-        if 13 in formats: # CF_UNICODETEXT
+        if 13 in formats:  # CF_UNICODETEXT
             handle = user32.GetClipboardData(13)
             if handle:
                 ptr = kernel32.GlobalLock(handle)
                 if ptr:
                     try:
                         text = ctypes.c_wchar_p(ptr).value
-                        preview = text[:200] + ('...' if len(text) > 200 else '')
+                        preview = text[:200] + \
+                            ('...' if len(text) > 200 else '')
                         info_lines.append(f"文本预览: \"{preview}\"")
                     finally:
                         kernel32.GlobalUnlock(handle)
-        if 15 in formats: # CF_HDROP
+        if 15 in formats:  # CF_HDROP
             handle = user32.GetClipboardData(15)
             if handle:
                 count = shell32.DragQueryFileW(handle, 0xFFFFFFFF, None, 0)
@@ -285,20 +331,23 @@ def get_clipboard_info():
         user32.CloseClipboard()
     return "\n".join(info_lines)
 
+
 def window_proc(hwnd, msg, wParam, lParam):
     """杂鱼♡～窗口过程函数喵～"""
     global message_count
     if msg == WM_CLIPBOARDUPDATE:
         message_count += 1
-        print(f"\n{'='*50}\n杂鱼♡～剪贴板更新 #{message_count} 喵～\n{'='*50}")
+        print(f"\n{'=' * 50}\n杂鱼♡～剪贴板更新 #{message_count} 喵～\n{'=' * 50}")
         print(get_smart_source_analysis())
         print("-" * 25)
         print(get_clipboard_info())
-        print(f"{'='*50}\n")
+        print(f"{'=' * 50}\n")
         return 0
     return user32.DefWindowProcW(hwnd, msg, wParam, lParam)
 
 # 杂鱼♡～新的线程封装类喵～
+
+
 class ClipboardMonitorThread(threading.Thread):
     def __init__(self):
         super().__init__()
@@ -322,7 +371,8 @@ class ClipboardMonitorThread(threading.Thread):
             print("杂鱼♡～窗口焦点钩子设置成功喵～")
             current_hwnd = user32.GetForegroundWindow()
             if current_hwnd:
-                winevent_proc(None, EVENT_SYSTEM_FOREGROUND, current_hwnd, 0, 0, 0, 0)
+                winevent_proc(None, EVENT_SYSTEM_FOREGROUND,
+                              current_hwnd, 0, 0, 0, 0)
             return True
         print(f"杂鱼♡～设置窗口焦点钩子失败喵！错误码：{kernel32.GetLastError()}")
         return False
@@ -341,13 +391,15 @@ class ClipboardMonitorThread(threading.Thread):
         if not self.setup_focus_hook():
             self.init_event.set()
             return
-        
-        WNDPROC = ctypes.WINFUNCTYPE(w.LPARAM, w.HWND, w.UINT, w.WPARAM, w.LPARAM)
+
+        WNDPROC = ctypes.WINFUNCTYPE(
+            w.LPARAM, w.HWND, w.UINT, w.WPARAM, w.LPARAM)
         self.window_proc_func = WNDPROC(window_proc)
-        
+
         hinstance = kernel32.GetModuleHandleW(None)
-        self.hwnd = user32.CreateWindowExW(0, "STATIC", "ClipboardTest", 0, 0, 0, 0, 0, w.HWND(-3), None, hinstance, None)
-        
+        self.hwnd = user32.CreateWindowExW(
+            0, "STATIC", "ClipboardTest", 0, 0, 0, 0, 0, w.HWND(-3), None, hinstance, None)
+
         if not self.hwnd:
             print(f"杂鱼♡～创建窗口失败喵！错误码：{kernel32.GetLastError()}")
             self.init_event.set()
@@ -357,25 +409,27 @@ class ClipboardMonitorThread(threading.Thread):
         if sys.maxsize > 2**32:
             user32.SetWindowLongPtrW.argtypes = [w.HWND, ctypes.c_int, WNDPROC]
             user32.SetWindowLongPtrW.restype = WNDPROC
-            user32.SetWindowLongPtrW(self.hwnd, GWLP_WNDPROC, self.window_proc_func)
+            user32.SetWindowLongPtrW(
+                self.hwnd, GWLP_WNDPROC, self.window_proc_func)
         else:
             user32.SetWindowLongW.argtypes = [w.HWND, ctypes.c_int, WNDPROC]
             user32.SetWindowLongW.restype = WNDPROC
-            user32.SetWindowLongW(self.hwnd, GWLP_WNDPROC, self.window_proc_func)
+            user32.SetWindowLongW(
+                self.hwnd, GWLP_WNDPROC, self.window_proc_func)
 
         if not user32.AddClipboardFormatListener(self.hwnd):
             print(f"杂鱼♡～添加剪贴板监听器失败喵！错误码：{kernel32.GetLastError()}")
             user32.DestroyWindow(self.hwnd)
             self.init_event.set()
             return
-            
+
         print("杂鱼♡～剪贴板监听器添加成功喵～")
         print("杂鱼♡～现在可以复制一些内容测试喵～")
         print("杂鱼♡～按Ctrl+C结束测试喵～")
-        
+
         # Signal that initialization is complete
         self.init_event.set()
-        
+
         msg = w.MSG()
         #
         # --- 杂鱼♡～这就是关键的修复喵！ ---
@@ -385,19 +439,20 @@ class ClipboardMonitorThread(threading.Thread):
         while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
             user32.TranslateMessage(ctypes.byref(msg))
             user32.DispatchMessageW(ctypes.byref(msg))
-            
+
         # Cleanup after the loop is broken
         print("杂鱼♡～消息循环结束，开始清理喵～")
         if self.hwnd:
             user32.DestroyWindow(self.hwnd)
             print("杂鱼♡～销毁窗口喵～")
         self.cleanup_focus_hook()
-    
+
     def stop(self):
         """杂鱼♡～从外部停止线程的方法喵～"""
         if self.thread_id:
             print("杂鱼♡～正在发送退出消息给监控线程喵～")
             user32.PostThreadMessageW(self.thread_id, WM_QUIT, 0, 0)
+
 
 # 杂鱼♡～这里是新的主程序入口喵～
 if __name__ == "__main__":
@@ -406,15 +461,14 @@ if __name__ == "__main__":
         monitor_thread.start()
         # Wait for the thread to signal that it's initialized before continuing
         monitor_thread.init_event.wait()
-        
+
         # Keep the main thread alive to listen for KeyboardInterrupt
         while monitor_thread.is_alive():
-            time.sleep(0.5) # A simple wait
+            time.sleep(0.5)  # A simple wait
     except KeyboardInterrupt:
         print("\n杂鱼♡～用户中断测试喵～")
     finally:
         if monitor_thread.is_alive():
             monitor_thread.stop()
-            monitor_thread.join() # Wait for the thread to fully clean up and exit
+            monitor_thread.join()  # Wait for the thread to fully clean up and exit
         print("杂鱼♡～再见了喵～")
-

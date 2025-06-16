@@ -1,487 +1,434 @@
-# 杂鱼♡～本喵为杂鱼主人创建的智能源应用追踪器喵～
+# 杂鱼♡～本喵的源追踪系统喵～
 """
-杂鱼♡～基于焦点跟踪的智能源应用程序分析器喵～
-从 test_clipboard_hook.py 中提取的核心功能，结合焦点跟踪实现准确的源识别喵～
+杂鱼♡～专业的剪贴板源应用程序追踪模块喵～
+本模块提供对剪贴板数据来源的精确识别和追踪功能。
 """
-import ctypes
-import ctypes.wintypes as w
-import os
-import threading
-import time
-from typing import Any, Dict, List, Optional
 
-from .win32_api import Win32API
+import ctypes
+import time
+from ctypes import wintypes
+from typing import Dict, Any
+
+from .logger import get_logger
+
+logger = get_logger(__name__)
+
+# 杂鱼♡～Windows API常量喵～
+SWP_NOSIZE = 0x0001
+SWP_NOMOVE = 0x0002
+SWP_NOZORDER = 0x0004
+SWP_NOREDRAW = 0x0008
+SWP_NOACTIVATE = 0x0010
+SWP_FRAMECHANGED = 0x0020
+SWP_SHOWWINDOW = 0x0040
+SWP_HIDEWINDOW = 0x0080
+SWP_NOCOPYBITS = 0x0100
+SWP_NOOWNERZORDER = 0x0200
+SWP_NOSENDCHANGING = 0x0400
+
+HWND_TOP = 0
+HWND_BOTTOM = 1
+HWND_TOPMOST = -1
+HWND_NOTOPMOST = -2
+
+GW_HWNDFIRST = 0
+GW_HWNDLAST = 1
+GW_HWNDNEXT = 2
+GW_HWNDPREV = 3
+GW_OWNER = 4
+GW_CHILD = 5
+
+SW_HIDE = 0
+SW_SHOWNORMAL = 1
+SW_NORMAL = 1
+SW_SHOWMINIMIZED = 2
+SW_SHOWMAXIMIZED = 3
+SW_MAXIMIZE = 3
+SW_SHOWNOACTIVATE = 4
+SW_SHOW = 5
+SW_MINIMIZE = 6
+SW_SHOWMINNOACTIVE = 7
+SW_SHOWNA = 8
+SW_RESTORE = 9
+
+# 杂鱼♡～Windows消息常量喵～
+WM_SETFOCUS = 0x0007
+WM_KILLFOCUS = 0x0008
+WM_ACTIVATE = 0x0006
+WM_MOUSEACTIVATE = 0x0021
+WM_NCACTIVATE = 0x0086
+WM_ACTIVATEAPP = 0x001C
+
+# 杂鱼♡～激活状态常量喵～
+WA_INACTIVE = 0
+WA_ACTIVE = 1
+WA_CLICKACTIVE = 2
+
+# 杂鱼♡～鼠标激活返回值常量喵～
+MA_ACTIVATE = 1
+MA_ACTIVATEANDEAT = 2
+MA_NOACTIVATE = 3
+MA_NOACTIVATEANDEAT = 4
+
+# 杂鱼♡～获取窗口信息的常量喵～
+GWL_STYLE = -16
+GWL_EXSTYLE = -20
+GWL_WNDPROC = -4
+GWL_HINSTANCE = -6
+GWL_HWNDPARENT = -8
+GWL_ID = -12
+GWL_USERDATA = -21
+
+# 杂鱼♡～窗口样式常量喵～
+WS_OVERLAPPED = 0x00000000
+WS_POPUP = 0x80000000
+WS_CHILD = 0x40000000
+WS_MINIMIZE = 0x20000000
+WS_VISIBLE = 0x10000000
+WS_DISABLED = 0x08000000
+WS_CLIPSIBLINGS = 0x04000000
+WS_CLIPCHILDREN = 0x02000000
+WS_MAXIMIZE = 0x01000000
+WS_CAPTION = 0x00C00000
+WS_BORDER = 0x00800000
+WS_DLGFRAME = 0x00400000
+WS_VSCROLL = 0x00200000
+WS_HSCROLL = 0x00100000
+WS_SYSMENU = 0x00080000
+WS_THICKFRAME = 0x00040000
+WS_GROUP = 0x00020000
+WS_TABSTOP = 0x00010000
+
+# 杂鱼♡～扩展窗口样式常量喵～
+WS_EX_DLGMODALFRAME = 0x00000001
+WS_EX_NOPARENTNOTIFY = 0x00000004
+WS_EX_TOPMOST = 0x00000008
+WS_EX_ACCEPTFILES = 0x00000010
+WS_EX_TRANSPARENT = 0x00000020
+WS_EX_MDICHILD = 0x00000040
+WS_EX_TOOLWINDOW = 0x00000080
+WS_EX_WINDOWEDGE = 0x00000100
+WS_EX_CLIENTEDGE = 0x00000200
+WS_EX_CONTEXTHELP = 0x00000400
+WS_EX_RIGHT = 0x00001000
+WS_EX_LEFT = 0x00000000
+WS_EX_RTLREADING = 0x00002000
+WS_EX_LTRREADING = 0x00000000
+WS_EX_LEFTSCROLLBAR = 0x00004000
+WS_EX_RIGHTSCROLLBAR = 0x00000000
+WS_EX_CONTROLPARENT = 0x00010000
+WS_EX_STATICEDGE = 0x00020000
+WS_EX_APPWINDOW = 0x00040000
+
+# 杂鱼♡～进程访问权限常量喵～
+PROCESS_QUERY_INFORMATION = 0x0400
+PROCESS_VM_READ = 0x0010
+
+# 杂鱼♡～Windows API函数声明喵～
+try:
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+    psapi = ctypes.windll.psapi
+
+    # 杂鱼♡～函数原型声明喵～
+    user32.GetForegroundWindow.restype = wintypes.HWND
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetWindowTextW.restype = ctypes.c_int
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.GetWindowLongW.restype = wintypes.LONG
+    user32.GetParent.argtypes = [wintypes.HWND]
+    user32.GetParent.restype = wintypes.HWND
+    user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
+    user32.GetAncestor.restype = wintypes.HWND
+
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    psapi.GetModuleBaseNameW.argtypes = [wintypes.HANDLE, wintypes.HMODULE, wintypes.LPWSTR, wintypes.DWORD]
+    psapi.GetModuleBaseNameW.restype = wintypes.DWORD
+    psapi.GetProcessImageFileNameW.argtypes = [wintypes.HANDLE, wintypes.LPWSTR, wintypes.DWORD]
+    psapi.GetProcessImageFileNameW.restype = wintypes.DWORD
+
+except Exception as e:
+    logger.error(f"杂鱼♡～Windows API初始化失败: {e}")
+    user32 = None
+    kernel32 = None
+    psapi = None
 
 
 class SourceTracker:
-    """杂鱼♡～智能源应用程序追踪器，结合焦点跟踪和剪贴板拥有者分析喵～"""
+    """杂鱼♡～剪贴板源追踪器喵～"""
 
-    # 杂鱼♡～类级别变量，跟踪焦点变化喵～
-    _focus_tracker = None
-    _focus_lock = threading.Lock()
-    _current_focus_info = None
-    _focus_history = []
-    _focus_hook_handle = None
-    _winevent_proc_func = None
-    _message_loop_thread = None
-    _is_tracking = False
-    _stop_event = threading.Event()
+    def __init__(self):
+        self.last_foreground_window = None
+        self.last_foreground_time = 0
+        self.last_known_source = {}
+        self.source_cache = {}
+        self.cache_timeout = 2.0  # 杂鱼♡～缓存超时时间喵～
 
-    # 杂鱼♡～系统进程黑名单喵～
-    SYSTEM_PROCESSES = {
-        'svchost.exe', 'dwm.exe', 'explorer.exe', 'winlogon.exe', 'csrss.exe',
-        'screenclippinghost.exe', 'taskhostw.exe', 'runtimebroker.exe',
-        'sihost.exe', 'shellexperiencehost.exe', 'searchui.exe', 'cortana.exe',
-        'windowsinternal.composableshell.experiences.textinput.inputapp.exe',
-        'applicationframehost.exe', 'searchapp.exe', 'startmenuexperiencehost.exe'
-    }
+    def get_foreground_window_info(self) -> Dict[str, Any]:
+        """杂鱼♡～获取前台窗口信息喵～"""
+        if not user32:
+            return {'error': '杂鱼♡～Windows API不可用'}
 
-    # 杂鱼♡～窗口事件常量喵～
-    EVENT_SYSTEM_FOREGROUND = 0x0003
-    WINEVENT_OUTOFCONTEXT = 0x0000
-    WINEVENT_SKIPOWNPROCESS = 0x0002
-    PROCESS_QUERY_INFORMATION = 0x0400
-    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-
-    @classmethod
-    def initialize_focus_tracking(cls) -> bool:
-        """杂鱼♡～初始化焦点跟踪功能喵～"""
-        if cls._is_tracking:
-            return True
-            
-        print("杂鱼♡～初始化智能焦点跟踪器喵～")
-        
         try:
-            cls._stop_event.clear()
-            
-            # 杂鱼♡～启动消息循环线程来处理钩子事件喵～
-            cls._message_loop_thread = threading.Thread(
-                target=cls._focus_tracking_message_loop, 
-                daemon=False,
-                name="FocusTrackingThread"
-            )
-            cls._message_loop_thread.start()
-            
-            # 杂鱼♡～等待一点时间确保钩子设置成功喵～
-            time.sleep(1.0)
-            
-            # 杂鱼♡～检查钩子是否设置成功喵～
-            if cls._focus_hook_handle is not None:
-                cls._is_tracking = True
-                print("杂鱼♡～焦点跟踪器初始化成功喵～")
-                return True
-            else:
-                print("杂鱼♡～焦点跟踪器初始化失败 - 钩子未设置喵～")
-                cls._is_tracking = False
-                return False
-                
-        except Exception as e:
-            print(f"杂鱼♡～初始化焦点跟踪器时出错喵～：{str(e)}")
-            cls._is_tracking = False
-            return False
+            hwnd = user32.GetForegroundWindow()
+            if not hwnd:
+                return {'error': '杂鱼♡～无前台窗口'}
 
-    @classmethod
-    def _focus_tracking_message_loop(cls):
-        """杂鱼♡～焦点跟踪的消息循环线程喵～"""
-        try:
-            print("杂鱼♡～启动焦点跟踪消息循环线程喵～")
-            
-            # 杂鱼♡～在消息循环线程中设置钩子喵～
-            WINEVENTPROC = ctypes.WINFUNCTYPE(
-                None, w.HANDLE, w.DWORD, w.HWND, w.LONG, w.LONG, w.DWORD, w.DWORD
-            )
-            cls._winevent_proc_func = WINEVENTPROC(cls._winevent_proc)
-            
-            # 杂鱼♡～设置Windows事件钩子喵～
-            cls._focus_hook_handle = Win32API.user32.SetWinEventHook(
-                cls.EVENT_SYSTEM_FOREGROUND,
-                cls.EVENT_SYSTEM_FOREGROUND,
-                None,
-                cls._winevent_proc_func,
-                0,
-                0,
-                cls.WINEVENT_OUTOFCONTEXT | cls.WINEVENT_SKIPOWNPROCESS
-            )
-            
-            if cls._focus_hook_handle:
-                print("杂鱼♡～焦点跟踪钩子设置成功喵～")
-                
-                # 杂鱼♡～初始化当前焦点信息喵～
-                current_hwnd = Win32API.user32.GetForegroundWindow()
-                if current_hwnd:
-                    cls._winevent_proc(None, cls.EVENT_SYSTEM_FOREGROUND, current_hwnd, 0, 0, 0, 0)
-                
-                # 杂鱼♡～运行消息循环喵～
-                cls._run_message_loop()
-            else:
-                print(f"杂鱼♡～设置焦点钩子失败喵！错误码：{Win32API.kernel32.GetLastError()}")
-                
-        except Exception as e:
-            print(f"杂鱼♡～焦点跟踪消息循环出错喵～：{str(e)}")
-        finally:
-            # 杂鱼♡～清理钩子喵～
-            if cls._focus_hook_handle:
-                Win32API.user32.UnhookWinEvent(cls._focus_hook_handle)
-                cls._focus_hook_handle = None
-            print("杂鱼♡～焦点跟踪消息循环线程结束喵～")
+            # 杂鱼♡～检查缓存喵～
+            current_time = time.time()
+            cache_key = f"window_{hwnd}"
+            if cache_key in self.source_cache:
+                cached_data, cache_time = self.source_cache[cache_key]
+                if current_time - cache_time < self.cache_timeout:
+                    logger.debug("杂鱼♡～使用缓存的窗口信息")
+                    return cached_data
 
-    @classmethod
-    def _run_message_loop(cls):
-        """杂鱼♡～运行Windows消息循环喵～"""
-        print("杂鱼♡～开始运行消息循环喵～")
-        from .win32_api import Win32Structures
-        msg = Win32Structures.MSG()
-        
-        while not cls._stop_event.is_set():
-            try:
-                # 杂鱼♡～使用PeekMessage进行非阻塞消息检查喵～
-                bRet = Win32API.user32.PeekMessageW(
-                    ctypes.byref(msg), 
-                    None, 
-                    0, 
-                    0, 
-                    1  # PM_REMOVE
-                )
-                
-                if bRet:
-                    # 杂鱼♡～处理消息喵～
-                    Win32API.user32.TranslateMessage(ctypes.byref(msg))
-                    Win32API.user32.DispatchMessageW(ctypes.byref(msg))
-                    
-                    # 杂鱼♡～检查是否为退出消息喵～
-                    if msg.message == 0x0012:  # WM_QUIT
-                        print("杂鱼♡～收到退出消息，结束消息循环喵～")
-                        break
-                
-                # 杂鱼♡～短暂休眠，无论是否有消息喵～
-                time.sleep(0.01)
-                    
-            except Exception as e:
-                print(f"杂鱼♡～消息循环处理出错喵～：{str(e)}")
-                time.sleep(0.1)
-
-    @classmethod
-    def cleanup_focus_tracking(cls):
-        """杂鱼♡～清理焦点跟踪功能喵～"""
-        if not cls._is_tracking:
-            return
-            
-        print("杂鱼♡～清理焦点跟踪器喵～")
-        
-        try:
-            cls._stop_event.set()
-            cls._is_tracking = False
-            
-            # 杂鱼♡～等待消息循环线程结束喵～
-            if cls._message_loop_thread and cls._message_loop_thread.is_alive():
-                cls._message_loop_thread.join(timeout=3.0)
-                if cls._message_loop_thread.is_alive():
-                    print("杂鱼♡～消息循环线程在3秒内未能结束喵～")
-                
-            # 杂鱼♡～清理状态喵～
-            with cls._focus_lock:
-                cls._current_focus_info = None
-                cls._focus_history.clear()
-                
-            cls._message_loop_thread = None
-            print("杂鱼♡～焦点跟踪器已清理喵～")
-            
-        except Exception as e:
-            print(f"杂鱼♡～清理焦点跟踪器时出错喵～：{str(e)}")
-
-    @staticmethod
-    def _winevent_proc(hWinEventHook, event, hwnd, idObject, idChild, dwEventThread, dwmsEventTime):
-        """杂鱼♡～窗口事件钩子回调函数喵～"""
-        if event == SourceTracker.EVENT_SYSTEM_FOREGROUND and hwnd:
-            try:
-                window_info = SourceTracker._get_window_info(hwnd)
-                if isinstance(window_info, dict):
-                    # print(f"杂鱼♡～检测到窗口焦点变化: {window_info['exe_info']['name']} - {window_info['title']}")
-                    
-                    # 杂鱼♡～过滤系统窗口和无效窗口喵～
-                    if (window_info['exe_info']['name'].lower() not in SourceTracker.SYSTEM_PROCESSES and
-                        window_info['title'] != "杂鱼♡～无标题" and
-                        len(window_info['title'].strip()) > 0):
-                        
-                        # print(f"杂鱼♡～有效的焦点切换: {window_info['exe_info']['name']}")
-                        
-                        with SourceTracker._focus_lock:
-                            SourceTracker._current_focus_info = window_info.copy()
-                            SourceTracker._current_focus_info['focus_time'] = time.time()
-                            
-                            # 杂鱼♡～更新焦点历史，避免重复喵～
-                            SourceTracker._focus_history = [
-                                f for f in SourceTracker._focus_history 
-                                if f['exe_info']['name'].lower() != window_info['exe_info']['name'].lower()
-                            ]
-                            SourceTracker._focus_history.insert(0, SourceTracker._current_focus_info)
-                            
-                            # 杂鱼♡～只保留最近10个喵～
-                            SourceTracker._focus_history = SourceTracker._focus_history[:10]
-                    else:
-                        print(f"杂鱼♡～过滤掉的窗口: {window_info['exe_info']['name']} - {window_info['title']}")
-                            
-            except Exception as e:
-                print(f"杂鱼♡～焦点钩子回调出错喵～：{str(e)}")
-
-    @classmethod
-    def _get_window_info(cls, hwnd, description=""):
-        """杂鱼♡～获取窗口详细信息的通用函数喵～"""
-        if not hwnd or not Win32API.user32.IsWindow(hwnd):
-            return f"杂鱼♡～{description}窗口无效喵～"
-        
-        try:
-            # 杂鱼♡～获取窗口标题（改进版）喵～
-            title_length = Win32API.user32.GetWindowTextLengthW(hwnd)
+            # 杂鱼♡～获取窗口标题喵～
+            title_length = user32.GetWindowTextLengthW(hwnd)
             if title_length > 0:
-                window_title_buffer = ctypes.create_unicode_buffer(title_length + 1)
-                actual_length = Win32API.user32.GetWindowTextW(hwnd, window_title_buffer, title_length + 1)
-                window_title = window_title_buffer.value if actual_length > 0 else "杂鱼♡～无标题"
+                title_buffer = ctypes.create_unicode_buffer(title_length + 1)
+                user32.GetWindowTextW(hwnd, title_buffer, title_length + 1)
+                window_title = title_buffer.value
             else:
-                window_title = "杂鱼♡～无标题"
-            
-            # 杂鱼♡～获取窗口类名喵～
-            class_buffer = ctypes.create_unicode_buffer(256)
-            class_length = Win32API.user32.GetClassNameW(hwnd, class_buffer, 256)
-            window_class = class_buffer.value if class_length > 0 else "杂鱼♡～未知类名"
-            
-            # 杂鱼♡～获取进程信息喵～
-            process_id = w.DWORD()
-            thread_id = Win32API.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
-            
-            if not process_id.value:
-                return f"杂鱼♡～{description}无法获取进程ID喵～（窗口：{window_title}，类名：{window_class}）"
-            
-            # 杂鱼♡～获取可执行文件路径喵～
-            exe_info = cls._get_process_path(process_id.value)
-            
-            return {
-                'title': window_title,
-                'class': window_class,
-                'pid': process_id.value,
-                'exe_info': exe_info,
-                'hwnd': hwnd
-            }
-            
-        except Exception as e:
-            return f"杂鱼♡～获取{description}窗口信息时出错喵～：{str(e)}"
+                window_title = ""
 
-    @classmethod
-    def _get_process_path(cls, process_id):
-        """杂鱼♡～获取进程路径信息喵～"""
+            # 杂鱼♡～获取进程信息喵～
+            process_id = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
+
+            process_name = self._get_process_name(process_id.value)
+
+            # 杂鱼♡～获取窗口属性喵～
+            is_visible = bool(user32.IsWindowVisible(hwnd))
+            window_style = user32.GetWindowLongW(hwnd, GWL_STYLE)
+            window_ex_style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+
+            # 杂鱼♡～判断是否为有效的应用程序窗口喵～
+            is_valid_app_window = self._is_valid_app_window(hwnd, window_style, window_ex_style)
+
+            window_info = {
+                'hwnd': hwnd,
+                'window_title': window_title,
+                'process_id': process_id.value,
+                'process_name': process_name,
+                'is_visible': is_visible,
+                'is_valid_app': is_valid_app_window,
+                'window_style': window_style,
+                'window_ex_style': window_ex_style,
+                'timestamp': current_time
+            }
+
+            # 杂鱼♡～缓存结果喵～
+            self.source_cache[cache_key] = (window_info, current_time)
+
+            # 杂鱼♡～清理过期缓存喵～
+            self._cleanup_cache(current_time)
+
+            return window_info
+
+        except Exception as e:
+            logger.error(f"杂鱼♡～获取窗口信息失败: {e}")
+            return {'error': f'获取窗口信息失败: {str(e)}'}
+
+    def _get_process_name(self, process_id: int) -> str:
+        """杂鱼♡～根据进程ID获取进程名称喵～"""
+        if not kernel32 or not psapi:
+            return "Unknown"
+
         try:
-            # 杂鱼♡～打开进程获取详细信息喵～
-            process_handle = Win32API.kernel32.OpenProcess(
-                cls.PROCESS_QUERY_INFORMATION | cls.PROCESS_QUERY_LIMITED_INFORMATION, 
-                False, 
+            # 杂鱼♡～打开进程句柄喵～
+            process_handle = kernel32.OpenProcess(
+                PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                False,
                 process_id
             )
-            
+
             if not process_handle:
-                # 杂鱼♡～尝试较低权限喵～
-                process_handle = Win32API.kernel32.OpenProcess(cls.PROCESS_QUERY_LIMITED_INFORMATION, False, process_id)
-            
-            if not process_handle:
-                return {'name': f'PID:{process_id}', 'path': '杂鱼♡～无法打开进程'}
-            
+                return "Unknown"
+
             try:
-                # 杂鱼♡～尝试获取完整进程路径喵～
-                exe_path = None
-                
-                # 杂鱼♡～方法1：使用QueryFullProcessImageName（推荐）喵～
-                path_buffer = ctypes.create_unicode_buffer(1024)
-                path_size = w.DWORD(1024)
-                if Win32API.kernel32.QueryFullProcessImageNameW(process_handle, 0, path_buffer, ctypes.byref(path_size)):
-                    exe_path = path_buffer.value
-                
-                if exe_path:
-                    exe_name = os.path.basename(exe_path)
-                    return {'name': exe_name, 'path': exe_path}
+                # 杂鱼♡～获取进程名称喵～
+                buffer = ctypes.create_unicode_buffer(1024)
+                if psapi.GetModuleBaseNameW(process_handle, None, buffer, 1024):
+                    return buffer.value
                 else:
-                    return {'name': f'PID:{process_id}', 'path': '杂鱼♡～无法获取路径'}
-                    
+                    # 杂鱼♡～尝试获取完整路径喵～
+                    if psapi.GetProcessImageFileNameW(process_handle, buffer, 1024):
+                        full_path = buffer.value
+                        return full_path.split('\\')[-1] if '\\' in full_path else full_path
+                    return "Unknown"
+
             finally:
-                Win32API.kernel32.CloseHandle(process_handle)
-                
-        except Exception as e:
-            return {'name': f'PID:{process_id}', 'path': f'杂鱼♡～出错：{str(e)}'}
+                kernel32.CloseHandle(process_handle)
 
-    @classmethod
-    def get_source_application_info(cls) -> Dict[str, Any]:
-        """杂鱼♡～获取智能源应用程序分析结果喵～"""
-        # 杂鱼♡～确保焦点跟踪已初始化喵～
-        if not cls._is_tracking:
-            cls.initialize_focus_tracking()
-        
-        try:
-            # 杂鱼♡～获取当前焦点信息喵～
-            with cls._focus_lock:
-                current_focus = cls._current_focus_info.copy() if cls._current_focus_info else None
-                recent_focus = cls._focus_history[:5] if cls._focus_history else []
-            
-            # 杂鱼♡～获取剪贴板拥有者喵～
-            owner_hwnd = Win32API.user32.GetClipboardOwner()
-            owner_info = None
-            if owner_hwnd:
-                owner_info = cls._get_window_info(owner_hwnd, "剪贴板拥有者")
-            
-            # 杂鱼♡～分析真实的源应用程序喵～
-            real_source = None
-            confidence_level = "未知"
-            detection_method = "unknown"
-            
-            if current_focus:
-                # 杂鱼♡～检查当前焦点是否就是剪贴板拥有者喵～
-                if (owner_info and isinstance(owner_info, dict) and 
-                    current_focus['pid'] == owner_info['pid']):
-                    real_source = current_focus
-                    confidence_level = "高"
-                    detection_method = "focus_and_owner_match"
-                
-                # 杂鱼♡～检查最近焦点切换时间喵～
-                elif current_focus.get('focus_time', 0) > time.time() - 2:  # 杂鱼♡～2秒内的焦点切换喵～
-                    real_source = current_focus
-                    confidence_level = "中等"
-                    detection_method = "recent_focus"
-                
-                # 杂鱼♡～如果剪贴板拥有者是系统进程，使用当前焦点喵～
-                elif (owner_info and isinstance(owner_info, dict) and 
-                      owner_info['exe_info']['name'].lower() in cls.SYSTEM_PROCESSES):
-                    real_source = current_focus
-                    confidence_level = "中等"
-                    detection_method = "system_owner_fallback"
-            
-            # 杂鱼♡～如果还是没有，使用剪贴板拥有者喵～
-            if not real_source and owner_info and isinstance(owner_info, dict):
-                real_source = owner_info
-                confidence_level = "低"
-                detection_method = "clipboard_owner_only"
-            
-            # 杂鱼♡～如果还是没有，使用最近的焦点应用程序喵～
-            if not real_source and recent_focus:
-                real_source = recent_focus[0]
-                confidence_level = "低"
-                detection_method = "focus_history_fallback"
-            
-            # 杂鱼♡～构建兼容的返回结果喵～
-            result = {
-                "process_name": None,
-                "process_path": None,
-                "process_id": None,
-                "window_title": None,
-                "window_class": None,
-                "detection_method": detection_method,
-                "confidence_level": confidence_level,
-                "is_system_process": False,
-                "is_screenshot_tool": False,
-                "timestamp": time.time(),
-            }
-            
-            if real_source:
-                result.update({
-                    "process_name": real_source['exe_info']['name'],
-                    "process_path": real_source['exe_info']['path'],
-                    "process_id": real_source['pid'],
-                    "window_title": real_source['title'],
-                    "window_class": real_source['class'],
-                    "is_system_process": real_source['exe_info']['name'].lower() in cls.SYSTEM_PROCESSES,
-                })
-            
-            return result
-            
         except Exception as e:
-            return {
-                "process_name": None,
-                "process_path": None,
-                "process_id": None,
-                "window_title": None,
-                "window_class": None,
-                "detection_method": "error",
-                "confidence_level": "无",
-                "error": f"杂鱼♡～智能分析时出错喵～：{str(e)}",
-                "timestamp": time.time(),
+            logger.debug(f"杂鱼♡～获取进程名称失败: {e}")
+            return "Unknown"
+
+    def _is_valid_app_window(self, hwnd: int, style: int, ex_style: int) -> bool:
+        """杂鱼♡～判断是否为有效的应用程序窗口喵～"""
+        try:
+            # 杂鱼♡～基本可见性检查喵～
+            if not user32.IsWindowVisible(hwnd):
+                return False
+
+            # 杂鱼♡～排除工具窗口喵～
+            if ex_style & WS_EX_TOOLWINDOW:
+                return False
+
+            # 杂鱼♡～排除子窗口喵～
+            if style & WS_CHILD:
+                return False
+
+            # 杂鱼♡～检查是否有父窗口喵～
+            parent = user32.GetParent(hwnd)
+            if parent:
+                return False
+
+            # 杂鱼♡～检查窗口标题喵～
+            title_length = user32.GetWindowTextLengthW(hwnd)
+            if title_length == 0:
+                # 杂鱼♡～有些应用程序窗口可能没有标题喵～
+                return style & (WS_CAPTION | WS_SYSMENU) != 0
+
+            return True
+
+        except Exception as e:
+            logger.debug(f"杂鱼♡～窗口有效性检查失败: {e}")
+            return False
+
+    def _cleanup_cache(self, current_time: float):
+        """杂鱼♡～清理过期缓存喵～"""
+        expired_keys = []
+        for key, (_, cache_time) in self.source_cache.items():
+            if current_time - cache_time > self.cache_timeout:
+                expired_keys.append(key)
+
+        for key in expired_keys:
+            del self.source_cache[key]
+
+    def get_clipboard_source_info(self) -> Dict[str, Any]:
+        """杂鱼♡～获取剪贴板数据源信息喵～"""
+        current_window_info = self.get_foreground_window_info()
+
+        if 'error' in current_window_info:
+            # 杂鱼♡～如果获取失败，返回上次已知的源喵～
+            if self.last_known_source:
+                return {
+                    **self.last_known_source,
+                    'confidence': 'low',
+                    'note': '使用上次已知源信息'
+                }
+            return current_window_info
+
+        # 杂鱼♡～更新记录喵～
+        current_time = time.time()
+        hwnd = current_window_info.get('hwnd')
+
+        if hwnd != self.last_foreground_window:
+            self.last_foreground_window = hwnd
+            self.last_foreground_time = current_time
+
+        # 杂鱼♡～如果是有效的应用程序窗口，更新已知源喵～
+        if current_window_info.get('is_valid_app', False):
+            self.last_known_source = {
+                'process_name': current_window_info.get('process_name', 'Unknown'),
+                'window_title': current_window_info.get('window_title', ''),
+                'process_id': current_window_info.get('process_id', 0),
+                'hwnd': hwnd,
+                'timestamp': current_time
             }
 
-    @classmethod
-    def get_detailed_analysis(cls) -> str:
-        """杂鱼♡～获取详细的源应用程序分析报告喵～"""
-        try:
-            result_lines = []
-            
-            # 杂鱼♡～获取当前焦点信息喵～
-            with cls._focus_lock:
-                current_focus = cls._current_focus_info.copy() if cls._current_focus_info else None
-                recent_focus = cls._focus_history[:5] if cls._focus_history else []
-            
-            # 杂鱼♡～获取剪贴板拥有者喵～
-            owner_hwnd = Win32API.user32.GetClipboardOwner()
-            owner_info = None
-            if owner_hwnd:
-                owner_info = cls._get_window_info(owner_hwnd, "剪贴板拥有者")
-            
-            # 杂鱼♡～获取智能分析结果喵～
-            source_info = cls.get_source_application_info()
-            
-            result_lines.append("杂鱼♡～智能源应用程序分析结果喵～")
-            result_lines.append(f"置信度: {source_info.get('confidence_level', '未知')}")
-            result_lines.append(f"检测方法: {source_info.get('detection_method', 'unknown')}")
-            
-            if source_info.get('process_name'):
-                result_lines.append(f"进程名: {source_info['process_name']}")
-                result_lines.append(f"可执行文件路径: {source_info.get('process_path', 'Unknown')}")
-                result_lines.append(f"窗口标题: {source_info.get('window_title', 'Unknown')}")
-                result_lines.append(f"窗口类名: {source_info.get('window_class', 'Unknown')}")
-                result_lines.append(f"进程ID: {source_info.get('process_id', 'Unknown')}")
-            
-            # 杂鱼♡～显示详细分析信息喵～
-            result_lines.append("\n" + "="*30)
-            result_lines.append("杂鱼♡～详细分析信息喵～")
-            
-            # 杂鱼♡～当前焦点信息喵～
-            if current_focus:
-                result_lines.append(f"\n当前焦点应用程序:")
-                result_lines.append(f"  进程: {current_focus['exe_info']['name']}")
-                result_lines.append(f"  窗口: {current_focus['title']}")
-                result_lines.append(f"  PID: {current_focus['pid']}")
-                if current_focus.get('focus_time'):
-                    focus_age = time.time() - current_focus['focus_time']
-                    result_lines.append(f"  获得焦点时间: {focus_age:.1f}秒前")
-            
-            # 杂鱼♡～剪贴板拥有者信息喵～
-            if owner_info and isinstance(owner_info, dict):
-                result_lines.append(f"\n剪贴板拥有者:")
-                result_lines.append(f"  进程: {owner_info['exe_info']['name']}")
-                result_lines.append(f"  窗口: {owner_info['title']}")
-                result_lines.append(f"  PID: {owner_info['pid']}")
-            elif owner_hwnd:
-                result_lines.append(f"\n剪贴板拥有者: {owner_info}")
+        # 杂鱼♡～计算置信度喵～
+        time_since_focus = current_time - self.last_foreground_time
+        if time_since_focus < 1.0:  # 杂鱼♡～1秒内的窗口切换喵～
+            confidence = 'high'
+        elif time_since_focus < 5.0:  # 杂鱼♡～5秒内的喵～
+            confidence = 'medium'
+        else:
+            confidence = 'low'
+
+        result = {
+            **current_window_info,
+            'confidence': confidence,
+            'time_since_focus': time_since_focus
+        }
+
+        logger.debug(f"杂鱼♡～源追踪结果: {result.get('process_name', 'Unknown')} ({confidence} confidence)")
+
+        return result
+
+    def clear_cache(self):
+        """杂鱼♡～清空所有缓存喵～"""
+        self.source_cache.clear()
+        logger.debug("杂鱼♡～源追踪缓存已清空")
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """杂鱼♡～获取缓存统计信息喵～"""
+        current_time = time.time()
+        active_entries = 0
+        expired_entries = 0
+
+        for _, (_, cache_time) in self.source_cache.items():
+            if current_time - cache_time < self.cache_timeout:
+                active_entries += 1
             else:
-                result_lines.append(f"\n剪贴板拥有者: 无法获取")
-            
-            # 杂鱼♡～最近焦点历史喵～
-            if recent_focus:
-                result_lines.append(f"\n最近焦点历史:")
-                for i, focus in enumerate(recent_focus[:3]):
-                    age = time.time() - focus.get('focus_time', 0)
-                    result_lines.append(f"  {i+1}. {focus['exe_info']['name']} - {focus['title']} ({age:.1f}秒前)")
-            
-            return "\n".join(result_lines) if result_lines else "杂鱼♡～无法获取任何应用程序信息喵～"
-            
-        except Exception as e:
-            return f"杂鱼♡～详细分析时出错喵～：{str(e)}"
+                expired_entries += 1
 
-    @classmethod  
-    def get_focus_status(cls) -> Dict[str, Any]:
-        """杂鱼♡～获取焦点跟踪状态喵～"""
-        with cls._focus_lock:
-            return {
-                "is_tracking": cls._is_tracking,
-                "current_focus": cls._current_focus_info.copy() if cls._current_focus_info else None,
-                "focus_history_count": len(cls._focus_history),
-                "has_hook": cls._focus_hook_handle is not None,
-                "message_thread_alive": cls._message_loop_thread.is_alive() if cls._message_loop_thread else False,
-            }
+        return {
+            'total_entries': len(self.source_cache),
+            'active_entries': active_entries,
+            'expired_entries': expired_entries,
+            'cache_timeout': self.cache_timeout
+        }
 
 
-# 杂鱼♡～保持向后兼容性喵～
-__all__ = ["SourceTracker"]
+# 杂鱼♡～全局源追踪器实例喵～
+_source_tracker = None
+
+
+def get_source_tracker() -> SourceTracker:
+    """杂鱼♡～获取全局源追踪器实例喵～"""
+    global _source_tracker
+    if _source_tracker is None:
+        _source_tracker = SourceTracker()
+        logger.debug("杂鱼♡～创建新的源追踪器实例")
+    return _source_tracker
+
+
+def get_clipboard_source() -> Dict[str, Any]:
+    """杂鱼♡～便捷函数：获取剪贴板源信息喵～"""
+    tracker = get_source_tracker()
+    return tracker.get_clipboard_source_info()
+
+
+def clear_source_cache():
+    """杂鱼♡～便捷函数：清空源追踪缓存喵～"""
+    tracker = get_source_tracker()
+    tracker.clear_cache()
+
+
+def get_source_cache_stats() -> Dict[str, Any]:
+    """杂鱼♡～便捷函数：获取缓存统计信息喵～"""
+    tracker = get_source_tracker()
+    return tracker.get_cache_stats()
+
+
+# 杂鱼♡～导出的公共接口喵～
+__all__ = [
+    'SourceTracker',
+    'get_source_tracker',
+    'get_clipboard_source',
+    'clear_source_cache',
+    'get_source_cache_stats'
+]

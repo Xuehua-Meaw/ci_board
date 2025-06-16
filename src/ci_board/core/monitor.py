@@ -367,19 +367,19 @@ class ClipboardMonitor:
                 "type": content.get("type", ""),
                 "format": content.get("format", ""),
             }
-            
+
             # 杂鱼♡～快速特征哈希（用于第一阶段过滤）喵～
             basic_hash = hashlib.md5(
                 json.dumps(basic_features, sort_keys=True).encode("utf-8")
             ).hexdigest()
-            
+
             # 杂鱼♡～如果没有实际数据，只用基础特征喵～
             if not content.get("data"):
                 return f"basic_{basic_hash}"
-            
+
             data = content["data"]
             data_size = len(data) if isinstance(data, (bytes, bytearray)) else 0
-            
+
             # 杂鱼♡～对于小图片，使用完整数据哈希喵～
             if data_size <= 4096:  # 杂鱼♡～4KB以下直接全量哈希喵～
                 if isinstance(data, (bytes, bytearray)):
@@ -387,38 +387,38 @@ class ClipboardMonitor:
                 else:
                     data_hash = hashlib.md5(str(data).encode()).hexdigest()
                 return f"small_{basic_hash}_{data_hash}"
-            
+
             # 杂鱼♡～对于大图片，使用多点采样策略避免多步骤处理的细微差异喵～
             sample_points = []
-            
+
             # 杂鱼♡～采样策略：头部、中部、尾部 + 几个随机点喵～
             if isinstance(data, (bytes, bytearray)):
                 # 杂鱼♡～头部样本（前512字节）喵～
                 sample_points.append(data[:512])
-                
+
                 # 杂鱼♡～中部样本喵～
                 mid_start = data_size // 2 - 256
                 mid_end = data_size // 2 + 256
                 if mid_start >= 0 and mid_end <= data_size:
                     sample_points.append(data[mid_start:mid_end])
-                
+
                 # 杂鱼♡～尾部样本（后512字节）喵～
                 sample_points.append(data[-512:])
-                
+
                 # 杂鱼♡～固定位置采样（避免随机性导致不一致）喵～
                 quarter_pos = data_size // 4
                 three_quarter_pos = data_size * 3 // 4
                 sample_points.append(data[quarter_pos:quarter_pos+256])
                 sample_points.append(data[three_quarter_pos:three_quarter_pos+256])
-                
+
                 # 杂鱼♡～计算所有样本的组合哈希喵～
                 combined_samples = b"".join(sample_points)
                 data_fingerprint = hashlib.md5(combined_samples).hexdigest()
-                
+
                 # 杂鱼♡～加入数据大小作为额外特征喵～
                 size_info = {"data_size": data_size, "sample_count": len(sample_points)}
                 size_hash = hashlib.md5(json.dumps(size_info).encode()).hexdigest()
-                
+
                 return f"large_{basic_hash}_{data_fingerprint}_{size_hash}"
             else:
                 # 杂鱼♡～非字节数据，转换为字符串处理喵～
@@ -434,9 +434,9 @@ class ClipboardMonitor:
                     data_hash = hashlib.md5(combined.encode()).hexdigest()
                 else:
                     data_hash = hashlib.md5(data_str.encode()).hexdigest()
-                
+
                 return f"other_{basic_hash}_{data_hash}"
-                
+
         except Exception as e:
             self.logger.error(f"计算图片指纹时出错: {e}")
             # 杂鱼♡～出错时回退到基础哈希喵～
@@ -458,7 +458,7 @@ class ClipboardMonitor:
             last_time = self._content_cache[content_hash]
             current_time = time.time()
             time_diff = current_time - last_time
-            
+
             # 杂鱼♡～图片内容使用更长的去重窗口，因为多步骤处理可能延迟较久喵～
             if content_type == "image":
                 threshold = 3.0  # 杂鱼♡～图片3秒内的重复内容忽略喵～
@@ -494,7 +494,7 @@ class ClipboardMonitor:
             else:
                 # 杂鱼♡～其他内容10秒后过期喵～
                 expire_time = 10.0
-                
+
             if current_time - timestamp > expire_time:
                 expired_keys.append(content_hash)
 
@@ -666,13 +666,13 @@ class ClipboardMonitor:
             if current_seq == self._last_sequence_number:
                 # 杂鱼♡～序列号没变化，可能是重复消息，跳过处理喵～
                 return
-            
+
             # 杂鱼♡～检测内容类型，为图片内容增加额外延迟喵～
             content_type_detected = ClipboardUtils.detect_content_type()
             if content_type_detected == "image":
                 # 杂鱼♡～图片内容需要更多时间准备，稍微等待一下喵～
                 time.sleep(0.05)  # 杂鱼♡～50ms延迟，让剪贴板完全准备好喵～
-            
+
             # 杂鱼♡～获取新内容和源信息喵～
             if self._enable_source_tracking:
                 if self._use_optimized_tracker:

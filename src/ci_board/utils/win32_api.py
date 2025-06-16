@@ -27,13 +27,9 @@ class ClipboardError(Exception):
 class ClipboardTimeout(ClipboardError):
     """杂鱼♡～剪贴板操作超时异常喵～"""
 
-    pass
-
 
 class ClipboardAccessDenied(ClipboardError):
     """杂鱼♡～剪贴板访问被拒绝异常喵～"""
-
-    pass
 
 
 class Win32Structures:

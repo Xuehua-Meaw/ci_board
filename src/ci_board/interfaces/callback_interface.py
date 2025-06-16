@@ -15,7 +15,6 @@ class CallbackInterface(ABC):
             data: 剪贴板数据，类型根据具体处理器而定
             source_info: 源应用程序信息，包含进程路径、窗口标题等
         """
-        pass
 
     @abstractmethod
     def is_valid(self, data: Any) -> bool:
@@ -28,7 +27,6 @@ class CallbackInterface(ABC):
         Returns:
             bool: 数据是否有效
         """
-        pass
 
 
 class BaseClipboardHandler(CallbackInterface):

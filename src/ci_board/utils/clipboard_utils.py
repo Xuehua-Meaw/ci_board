@@ -80,7 +80,7 @@ class ClipboardUtils:
             except Exception as e:
                 print(f"杂鱼♡～获取源信息时出错喵：{e}")
                 source_info = None
-        
+
         # 杂鱼♡～然后获取剪贴板内容喵～
         content_type, content = ClipboardReader.get_clipboard_content(
             retry_count, timeout

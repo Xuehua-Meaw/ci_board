@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from ci_board.core.monitor import ClipboardMonitor
 
+
 def main():
     print("杂鱼♡～事件驱动剪贴板监控示例喵～")
     print("=" * 50)
@@ -96,6 +97,7 @@ def main():
     else:
         print("杂鱼♡～启动监控失败了喵！")
 
+
 def compare_modes():
     """杂鱼♡～比较两种监控模式的性能喵～"""
     print("\n杂鱼♡～监控模式对比喵～")
@@ -129,6 +131,7 @@ def compare_modes():
             print(f"  {mode_name} 检测到 {changes_detected} 次变化")
         else:
             print(f"  {mode_name} 启动失败")
+
 
 if __name__ == "__main__":
     main()

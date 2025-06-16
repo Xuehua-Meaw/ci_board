@@ -124,7 +124,7 @@ class MessagePump:
                     cls._window_callbacks[hwnd](msg, wParam, lParam)
                 except Exception as e:
                     print(f"杂鱼♡～窗口回调函数执行失败喵：{e}")
-            
+
             # 杂鱼♡～不在窗口过程中重复打印消息，避免双重处理喵～
             # 杂鱼♡～让回调函数负责具体的消息处理逻辑喵～
 

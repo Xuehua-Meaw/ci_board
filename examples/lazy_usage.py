@@ -12,6 +12,7 @@ setup_ci_board_logging(verbose=True)  # 杂鱼♡～可以改为quiet=True或deb
 
 from ci_board import create_monitor, BMPData
 
+
 def on_text_change(text, source_info=None):
     """杂鱼♡～文本变化回调函数（支持源信息）喵～"""
     print("杂鱼♡～检测到文本变化喵：")
@@ -30,6 +31,7 @@ def on_text_change(text, source_info=None):
             print(f"  进程ID：{source_info['process_id']}")
 
     print("-" * 50)
+
 
 def on_image_change(bData: BMPData, source_info=None):
     """杂鱼♡～图片变化回调函数（支持源信息）喵～"""
@@ -55,8 +57,8 @@ def on_image_change(bData: BMPData, source_info=None):
             print(f"  程序路径：{source_info['process_path']}")
         if source_info.get('window_title'):
             print(f"  窗口标题：{source_info['window_title']}")
-
     print("-" * 50)
+
 
 def on_files_change(files, source_info=None):
     """杂鱼♡～文件变化回调函数（支持源信息）喵～"""
@@ -67,8 +69,10 @@ def on_files_change(files, source_info=None):
         print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
         if source_info.get('process_path'):
             print(f"  程序路径：{source_info['process_path']}")
+
         if source_info.get('window_title'):
             print(f"  窗口标题：{source_info['window_title']}")
+
 
 def on_clipboard_update(data, source_info=None):
     """杂鱼♡～剪贴板更新回调函数（支持源信息）喵～"""
@@ -81,6 +85,7 @@ def on_clipboard_update(data, source_info=None):
         print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
         if source_info.get('process_path'):
             print(f"  程序路径：{source_info['process_path']}")
+
 
 if __name__ == "__main__":
     print("=" * 60)

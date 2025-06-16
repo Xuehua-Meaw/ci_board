@@ -14,6 +14,7 @@ text_counter = 0
 image_counter = 0
 file_counter = 0
 
+
 def fast_text_handler(text, source_info=None):
     """杂鱼♡～快速文本处理器喵～"""
     global text_counter
@@ -23,6 +24,7 @@ def fast_text_handler(text, source_info=None):
         print(f"   源应用: {source_info.get('process_name', 'Unknown')}")
     print(f"   线程: {threading.current_thread().name}")
     print("-" * 30)
+
 
 def slow_text_handler(text, source_info=None):
     """杂鱼♡～慢速文本处理器（10秒延迟）喵～"""
@@ -40,6 +42,7 @@ def slow_text_handler(text, source_info=None):
     print(f"🎉 [慢速文本处理器] #{text_counter} - 处理完成！")
     print("-" * 30)
 
+
 def fast_image_handler(data, source_info=None):
     """杂鱼♡～快速图片处理器喵～"""
     global image_counter
@@ -49,6 +52,7 @@ def fast_image_handler(data, source_info=None):
         print(f"   源应用: {source_info.get('process_name', 'Unknown')}")
     print(f"   线程: {threading.current_thread().name}")
     print("-" * 30)
+
 
 def slow_image_handler(data, source_info=None):
     """杂鱼♡～慢速图片处理器（5秒延迟）喵～"""
@@ -76,6 +80,7 @@ def slow_image_handler(data, source_info=None):
 #     print(f"   线程: {threading.current_thread().name}")
 #     print("-" * 30)
 
+
 def test_async_mode():
     """杂鱼♡～测试异步模式喵～"""
     print("🚀" * 20)
@@ -100,6 +105,7 @@ def test_async_mode():
 
     return monitor
 
+
 def test_sync_mode():
     """杂鱼♡～测试同步模式（对比用）喵～"""
     print("🐌" * 20)
@@ -123,6 +129,7 @@ def test_sync_mode():
     monitor.add_handler('image', slow_image_handler)
 
     return monitor
+
 
 def show_status(monitor):
     """杂鱼♡～显示监控器状态喵～"""
@@ -154,6 +161,7 @@ def show_status(monitor):
             break
         except Exception as e:
             print(f"杂鱼♡～状态报告出错了喵：{e}")
+
 
 if __name__ == "__main__":
     print("杂鱼♡～选择测试模式喵～")
