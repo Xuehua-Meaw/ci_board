@@ -2,6 +2,7 @@
 from .file_handler import FileExtensionFilter, FileHandler, FileSizeFilter
 from .image_handler import ImageFormatFilter, ImageHandler, ImageSizeFilter
 from .text_handler import TextHandler, TextLengthFilter, TextPatternFilter
+from .update_handler import SimpleUpdateHandler
 
 __all__ = [
     "TextHandler",
@@ -13,4 +14,5 @@ __all__ = [
     "FileHandler",
     "FileExtensionFilter",
     "FileSizeFilter",
+    "SimpleUpdateHandler",
 ]

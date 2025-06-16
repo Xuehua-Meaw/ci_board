@@ -2,6 +2,8 @@
 from typing import Any, Callable, Dict, Optional
 
 from ..interfaces.callback_interface import BaseClipboardHandler
+from ..utils.handler_utils import format_source_info_display
+from ..utils.filter_utils import SourceApplicationFilter
 
 
 class TextHandler(BaseClipboardHandler):
@@ -56,30 +58,9 @@ class TextHandler(BaseClipboardHandler):
 
         # 杂鱼♡～显示源应用程序信息喵～
         if source_info and self._include_source_info:
-            process_name = source_info.get("process_name", "Unknown")
-            detection_method = source_info.get("detection_method", "unknown")
-            is_fallback = source_info.get("is_fallback", False)
-
-            # 杂鱼♡～根据不同情况显示不同的信息喵～
-            if process_name == "Unknown":
-                print("  源应用程序：❓ 未知 (无法获取)")
-                if source_info.get("error"):
-                    print(f"    原因：{source_info['error']}")
-            elif is_fallback:
-                print(f"  源应用程序：🔄 {process_name} (推测)")
-                print(f"    检测方法：{detection_method}")
-                if source_info.get("note"):
-                    print(f"    说明：{source_info['note']}")
-            else:
-                print(f"  源应用程序：{process_name}")
-
-            # 杂鱼♡～显示其他详细信息喵～
-            if source_info.get("process_path") and process_name != "Unknown":
-                print(f"  程序路径：{source_info['process_path']}")
-            if source_info.get("window_title"):
-                print(f"  窗口标题：{source_info['window_title']}")
-            if source_info.get("process_id"):
-                print(f"  进程ID：{source_info['process_id']}")
+            source_lines = format_source_info_display(source_info)
+            for line in source_lines:
+                print(line)
 
         print("-" * 50)
 
@@ -139,40 +120,3 @@ class TextPatternFilter:
             return bool(self.regex.search(text))
         else:
             return self.pattern in text
-
-
-class SourceApplicationFilter:
-    """杂鱼♡～源应用程序过滤器类喵～"""
-
-    def __init__(
-        self,
-        allowed_processes: Optional[list] = None,
-        blocked_processes: Optional[list] = None,
-    ):
-        """
-        杂鱼♡～初始化源应用程序过滤器喵～
-
-        Args:
-            allowed_processes: 允许的进程名列表（例如：['notepad.exe', 'cursor.exe']）
-            blocked_processes: 禁止的进程名列表
-        """
-        self.allowed_processes = [p.lower() for p in (allowed_processes or [])]
-        self.blocked_processes = [p.lower() for p in (blocked_processes or [])]
-
-    def __call__(self, text: str, source_info: Optional[Dict[str, Any]] = None) -> bool:
-        """杂鱼♡～根据源应用程序过滤文本喵～"""
-        if not source_info or not source_info.get("process_name"):
-            # 杂鱼♡～如果没有源信息，默认允许喵～
-            return True
-
-        process_name = source_info["process_name"].lower()
-
-        # 杂鱼♡～检查是否在禁止列表中喵～
-        if self.blocked_processes and process_name in self.blocked_processes:
-            return False
-
-        # 杂鱼♡～如果有允许列表，检查是否在其中喵～
-        if self.allowed_processes:
-            return process_name in self.allowed_processes
-
-        return True

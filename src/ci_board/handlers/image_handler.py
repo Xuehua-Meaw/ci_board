@@ -5,6 +5,7 @@ import datetime
 from typing import Any, Callable, Dict, Optional, Union
 
 from ..interfaces.callback_interface import BaseClipboardHandler
+from ..utils.filter_utils import SourceApplicationFilter
 
 
 class BITMAP(ctypes.Structure):
@@ -439,42 +440,5 @@ class ImageAreaFilter:
             return False
         if self.max_area is not None and area > self.max_area:
             return False
-
-        return True
-
-
-class SourceApplicationImageFilter:
-    """杂鱼♡～图片源应用程序过滤器类喵～"""
-
-    def __init__(
-        self,
-        allowed_processes: Optional[list] = None,
-        blocked_processes: Optional[list] = None,
-    ):
-        """
-        杂鱼♡～初始化图片源应用程序过滤器喵～
-
-        Args:
-            allowed_processes: 允许的进程名列表
-            blocked_processes: 禁止的进程名列表
-        """
-        self.allowed_processes = [p.lower() for p in (allowed_processes or [])]
-        self.blocked_processes = [p.lower() for p in (blocked_processes or [])]
-
-    def __call__(self, data: Any, source_info: Optional[Dict[str, Any]] = None) -> bool:
-        """杂鱼♡～根据源应用程序过滤图片喵～"""
-        if not source_info or not source_info.get("process_name"):
-            # 杂鱼♡～如果没有源信息，默认允许喵～
-            return True
-
-        process_name = source_info["process_name"].lower()
-
-        # 杂鱼♡～检查是否在禁止列表中喵～
-        if self.blocked_processes and process_name in self.blocked_processes:
-            return False
-
-        # 杂鱼♡～如果有允许列表，检查是否在其中喵～
-        if self.allowed_processes:
-            return process_name in self.allowed_processes
 
         return True

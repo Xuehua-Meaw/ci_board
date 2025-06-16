@@ -8,9 +8,8 @@ from .message_pump import MessagePump
 from .source_tracker import SourceTracker
 from .win32_api import (ClipboardAccessDenied, ClipboardError, ClipboardFormat,
                         ClipboardTimeout, Win32API, Win32Structures)
-
-# 杂鱼♡～为了保持向后兼容性，也可以从旧的clipboard_utils导入喵～
-# from .clipboard_utils_backup import ClipboardUtils as ClipboardUtilsOld
+from .handler_utils import format_source_info_display
+from .filter_utils import SourceApplicationFilter
 
 __all__ = [
     # 杂鱼♡～核心API类喵～
@@ -26,4 +25,6 @@ __all__ = [
     "ClipboardError",
     "ClipboardTimeout",
     "ClipboardAccessDenied",
+    "format_source_info_display",
+    "SourceApplicationFilter",
 ]

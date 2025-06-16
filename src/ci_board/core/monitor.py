@@ -310,6 +310,7 @@ class ClipboardMonitor:
 
             return FileHandler(callback)
         elif content_type == "update":
+            from ..handlers.update_handler import SimpleUpdateHandler
             return SimpleUpdateHandler(callback)
         else:
             raise ValueError(f"杂鱼♡～无法为类型 {content_type} 创建处理器喵～")
@@ -687,28 +688,3 @@ class ClipboardMonitor:
     def is_running(self) -> bool:
         """杂鱼♡～检查监控器是否在运行喵～"""
         return self._is_running
-
-
-class SimpleUpdateHandler(BaseClipboardHandler):
-    """杂鱼♡～简单的更新处理器喵～"""
-
-    def __init__(self, callback=None):
-        super().__init__(callback)
-
-    def is_valid(self, data: Any) -> bool:
-        return True
-
-    def _default_handle(
-        self, data: Any, source_info: Optional[Dict[str, Any]] = None
-    ) -> None:
-        """杂鱼♡～默认的更新处理方法喵～"""
-        content_type, content = data
-        print(f"杂鱼♡～剪贴板内容更新了喵～类型：{content_type}")
-
-        # 杂鱼♡～显示源应用程序信息喵～
-        if source_info and self._include_source_info:
-            print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
-            if source_info.get("process_path"):
-                print(f"  程序路径：{source_info['process_path']}")
-            if source_info.get("window_title"):
-                print(f"  窗口标题：{source_info['window_title']}")

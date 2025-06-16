@@ -9,9 +9,7 @@ from ci_board import (
     create_image_handler,
     create_file_handler
 )
-from ci_board.handlers.text_handler import SourceApplicationFilter
-from ci_board.handlers.image_handler import SourceApplicationImageFilter
-from ci_board.handlers.file_handler import SourceApplicationFileFilter
+from ci_board.utils import SourceApplicationFilter # Updated import
 import time
 
 def advanced_text_callback(text, source_info=None):
@@ -143,12 +141,12 @@ def setup_source_filters():
     )
 
     # 杂鱼♡～禁止来自浏览器的图片复制喵～
-    no_browser_images_filter = SourceApplicationImageFilter(
+    no_browser_images_filter = SourceApplicationFilter( # Changed to generic
         blocked_processes=['chrome.exe', 'firefox.exe', 'edge.exe', 'brave.exe', 'opera.exe']
     )
 
     # 杂鱼♡～只允许来自文件管理器的文件复制喵～
-    file_manager_only_filter = SourceApplicationFileFilter(
+    file_manager_only_filter = SourceApplicationFilter( # Changed to generic
         allowed_processes=['explorer.exe', 'totalcmd.exe', 'freecommander.exe']
     )
 
