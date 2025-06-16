@@ -8,7 +8,7 @@
 
 ### 基本信息
 - **项目名称**: CI Board (Clipboard Intelligence Board)  
-- **版本**: v0.0.1 (开发版本)
+- **版本**: v0.0.5 (开发版本)
 - **描述**: 高性能剪贴板监控包
 - **Python版本**: >=3.8
 - **平台**: Windows

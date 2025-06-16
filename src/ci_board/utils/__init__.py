@@ -8,6 +8,9 @@ from .message_pump import MessagePump
 from .source_tracker import SourceTracker
 from .win32_api import (ClipboardAccessDenied, ClipboardError, ClipboardFormat,
                         ClipboardTimeout, Win32API, Win32Structures)
+# 杂鱼♡～导出日志系统喵～
+from .logger import (ComponentLogger, LogLevel, NekoLogger,
+                     get_component_logger, setup_ci_board_logging)
 
 # 杂鱼♡～为了保持向后兼容性，也可以从旧的clipboard_utils导入喵～
 # from .clipboard_utils_backup import ClipboardUtils as ClipboardUtilsOld
@@ -26,4 +29,10 @@ __all__ = [
     "ClipboardError",
     "ClipboardTimeout",
     "ClipboardAccessDenied",
+    # 杂鱼♡～日志系统喵～
+    "NekoLogger",
+    "ComponentLogger", 
+    "LogLevel",
+    "setup_ci_board_logging",
+    "get_component_logger",
 ]

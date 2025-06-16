@@ -9,6 +9,9 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 from ..interfaces.callback_interface import BaseClipboardHandler
 from ..utils.clipboard_utils import ClipboardUtils
+from ..utils.source_tracker import SourceTracker
+from ..utils.logger import get_component_logger
+from .source_tracker_ import OptimizedSourceTracker
 
 
 class ClipboardMonitor:
@@ -21,6 +24,8 @@ class ClipboardMonitor:
         handler_timeout: float = 30.0,
         event_driven: bool = True,
     ):
+        # 杂鱼♡～初始化日志器喵～
+        self.logger = get_component_logger("monitor")
         """
         杂鱼♡～初始化监控器喵～
 
@@ -48,6 +53,7 @@ class ClipboardMonitor:
         self._content_cache = {}  # 杂鱼♡～内容缓存，用于去重喵～
         self._cache_max_size = 10  # 杂鱼♡～最大缓存数量喵～
         self._enable_source_tracking = True  # 杂鱼♡～启用源应用程序追踪喵～
+        self._use_optimized_tracker = True  # 杂鱼♡～使用优化的源追踪器，避免消息循环冲突喵～
 
         # 杂鱼♡～事件驱动相关配置喵～
         self._event_driven = event_driven
@@ -336,24 +342,8 @@ class ClipboardMonitor:
                 # 杂鱼♡～文本内容直接哈希喵～
                 return hashlib.md5(content.encode("utf-8")).hexdigest()
             elif content_type == "image" and isinstance(content, dict):
-                # 杂鱼♡～图片内容根据关键信息哈希喵～
-                key_info = {
-                    "type": content.get("type"),
-                    "width": content.get("width"),
-                    "height": content.get("height"),
-                    "bit_count": content.get("bit_count"),
-                    "data_size": (
-                        len(content.get("data", b"")) if content.get("data") else 0
-                    ),
-                }
-                # 杂鱼♡～如果有数据，取前1024字节参与哈希计算喵～
-                if content.get("data") and len(content["data"]) > 0:
-                    data_sample = content["data"][:1024]
-                    key_info["data_sample"] = hashlib.md5(data_sample).hexdigest()
-
-                return hashlib.md5(
-                    json.dumps(key_info, sort_keys=True).encode("utf-8")
-                ).hexdigest()
+                # 杂鱼♡～图片内容使用更精确的指纹算法，专门处理多步骤重复问题喵～
+                return self._calculate_image_fingerprint(content)
             elif content_type == "files" and isinstance(content, list):
                 # 杂鱼♡～文件列表哈希喵～
                 file_list = sorted(content)  # 杂鱼♡～排序确保一致性喵～
@@ -366,9 +356,97 @@ class ClipboardMonitor:
             # 杂鱼♡～如果哈希计算失败，返回时间戳确保不会误判重复喵～
             return hashlib.md5(str(time.time()).encode("utf-8")).hexdigest()
 
+    def _calculate_image_fingerprint(self, content: dict) -> str:
+        """杂鱼♡～计算图片内容的精确指纹，专门用于识别多步骤处理的重复图片喵～"""
+        try:
+            # 杂鱼♡～基础特征：尺寸、位深度、格式喵～
+            basic_features = {
+                "width": content.get("width", 0),
+                "height": content.get("height", 0),
+                "bit_count": content.get("bit_count", 0),
+                "type": content.get("type", ""),
+                "format": content.get("format", ""),
+            }
+            
+            # 杂鱼♡～快速特征哈希（用于第一阶段过滤）喵～
+            basic_hash = hashlib.md5(
+                json.dumps(basic_features, sort_keys=True).encode("utf-8")
+            ).hexdigest()
+            
+            # 杂鱼♡～如果没有实际数据，只用基础特征喵～
+            if not content.get("data"):
+                return f"basic_{basic_hash}"
+            
+            data = content["data"]
+            data_size = len(data) if isinstance(data, (bytes, bytearray)) else 0
+            
+            # 杂鱼♡～对于小图片，使用完整数据哈希喵～
+            if data_size <= 4096:  # 杂鱼♡～4KB以下直接全量哈希喵～
+                if isinstance(data, (bytes, bytearray)):
+                    data_hash = hashlib.md5(data).hexdigest()
+                else:
+                    data_hash = hashlib.md5(str(data).encode()).hexdigest()
+                return f"small_{basic_hash}_{data_hash}"
+            
+            # 杂鱼♡～对于大图片，使用多点采样策略避免多步骤处理的细微差异喵～
+            sample_points = []
+            
+            # 杂鱼♡～采样策略：头部、中部、尾部 + 几个随机点喵～
+            if isinstance(data, (bytes, bytearray)):
+                # 杂鱼♡～头部样本（前512字节）喵～
+                sample_points.append(data[:512])
+                
+                # 杂鱼♡～中部样本喵～
+                mid_start = data_size // 2 - 256
+                mid_end = data_size // 2 + 256
+                if mid_start >= 0 and mid_end <= data_size:
+                    sample_points.append(data[mid_start:mid_end])
+                
+                # 杂鱼♡～尾部样本（后512字节）喵～
+                sample_points.append(data[-512:])
+                
+                # 杂鱼♡～固定位置采样（避免随机性导致不一致）喵～
+                quarter_pos = data_size // 4
+                three_quarter_pos = data_size * 3 // 4
+                sample_points.append(data[quarter_pos:quarter_pos+256])
+                sample_points.append(data[three_quarter_pos:three_quarter_pos+256])
+                
+                # 杂鱼♡～计算所有样本的组合哈希喵～
+                combined_samples = b"".join(sample_points)
+                data_fingerprint = hashlib.md5(combined_samples).hexdigest()
+                
+                # 杂鱼♡～加入数据大小作为额外特征喵～
+                size_info = {"data_size": data_size, "sample_count": len(sample_points)}
+                size_hash = hashlib.md5(json.dumps(size_info).encode()).hexdigest()
+                
+                return f"large_{basic_hash}_{data_fingerprint}_{size_hash}"
+            else:
+                # 杂鱼♡～非字节数据，转换为字符串处理喵～
+                data_str = str(data)
+                if len(data_str) > 2048:
+                    # 杂鱼♡～长字符串也采用采样策略喵～
+                    samples = [
+                        data_str[:512],
+                        data_str[len(data_str)//2-256:len(data_str)//2+256],
+                        data_str[-512:]
+                    ]
+                    combined = "".join(samples)
+                    data_hash = hashlib.md5(combined.encode()).hexdigest()
+                else:
+                    data_hash = hashlib.md5(data_str.encode()).hexdigest()
+                
+                return f"other_{basic_hash}_{data_hash}"
+                
+        except Exception as e:
+            self.logger.error(f"计算图片指纹时出错: {e}")
+            # 杂鱼♡～出错时回退到基础哈希喵～
+            fallback = f"{content.get('width', 0)}x{content.get('height', 0)}_{content.get('bit_count', 0)}"
+            return hashlib.md5(fallback.encode()).hexdigest()
+
     def _is_content_duplicate(self, content_data) -> bool:
         """杂鱼♡～检查内容是否重复喵～"""
         content_hash = self._calculate_content_hash(content_data)
+        content_type, content = content_data
 
         # 杂鱼♡～检查是否与上次内容相同喵～
         if content_hash == self._last_content_hash:
@@ -376,11 +454,22 @@ class ClipboardMonitor:
 
         # 杂鱼♡～检查缓存中是否存在喵～
         if content_hash in self._content_cache:
-            # 杂鱼♡～检查时间间隔，避免短时间内重复处理喵～
+            # 杂鱼♡～针对不同内容类型使用不同的时间窗口喵～
             last_time = self._content_cache[content_hash]
-            if time.time() - last_time < 1.0:  # 杂鱼♡～1秒内的重复内容忽略喵～
-                # print(f"杂鱼♡～检测到重复内容，已跳过处理喵～")
-                return True
+            current_time = time.time()
+            time_diff = current_time - last_time
+            
+            # 杂鱼♡～图片内容使用更长的去重窗口，因为多步骤处理可能延迟较久喵～
+            if content_type == "image":
+                threshold = 3.0  # 杂鱼♡～图片3秒内的重复内容忽略喵～
+                if time_diff < threshold:
+                    self.logger.debug(f"检测到重复图片内容，时间差{time_diff:.2f}s < {threshold}s，已跳过处理")
+                    return True
+            else:
+                threshold = 1.0  # 杂鱼♡～其他内容1秒内的重复内容忽略喵～
+                if time_diff < threshold:
+                    self.logger.debug(f"检测到重复{content_type}内容，时间差{time_diff:.2f}s < {threshold}s，已跳过处理")
+                    return True
 
         # 杂鱼♡～更新缓存喵～
         self._content_cache[content_hash] = time.time()
@@ -398,17 +487,37 @@ class ClipboardMonitor:
         expired_keys = []
 
         for content_hash, timestamp in self._content_cache.items():
-            if current_time - timestamp > 10.0:  # 杂鱼♡～10秒后过期喵～
+            # 杂鱼♡～根据内容类型决定过期时间喵～
+            if content_hash.startswith(("small_", "large_", "basic_", "other_")):
+                # 杂鱼♡～图片内容缓存保留更久，应对多步骤处理的延迟喵～
+                expire_time = 15.0  # 杂鱼♡～图片15秒后过期喵～
+            else:
+                # 杂鱼♡～其他内容10秒后过期喵～
+                expire_time = 10.0
+                
+            if current_time - timestamp > expire_time:
                 expired_keys.append(content_hash)
 
-        for key in expired_keys:
-            del self._content_cache[key]
+        if expired_keys:
+            self.logger.debug(f"清理了{len(expired_keys)}个过期缓存项")
+            for key in expired_keys:
+                del self._content_cache[key]
 
     def start(self) -> bool:
         """杂鱼♡～启动监控器喵～"""
         if self._is_running:
-            print("杂鱼♡～监控器已经在运行了喵～")
+            self.logger.warning("监控器已经在运行了")
             return False
+
+        # 杂鱼♡～初始化智能源追踪器喵～
+        if self._enable_source_tracking:
+            if self._use_optimized_tracker:
+                self.logger.info("正在初始化集成式智能源追踪功能")
+                # 杂鱼♡～优化版本不需要单独的消息循环，将在主监控线程中处理喵～
+            else:
+                self.logger.info("正在初始化传统智能源追踪功能")
+                if not SourceTracker.initialize_focus_tracking():
+                    self.logger.warning("智能源追踪初始化失败，将使用基础源追踪")
 
         # 杂鱼♡～初始化异步执行器喵～
         self._init_async_executor()
@@ -422,17 +531,17 @@ class ClipboardMonitor:
 
         # 杂鱼♡～等待窗口创建完成喵～
         if not self._window_creation_success.wait(timeout=5.0):
-            print("杂鱼♡～窗口创建超时了喵！")
+            self.logger.error("窗口创建超时了")
             self.stop()
             return False
 
         if not self._hwnd:
-            print("杂鱼♡～窗口创建失败了喵！")
+            self.logger.error("窗口创建失败了")
             return False
 
         self._is_running = True
-        print(
-            f"杂鱼♡～剪贴板监控已启动喵～(异步模式：{self._async_processing}, 监控模式：{self._monitoring_mode})"
+        self.logger.success(
+            f"剪贴板监控已启动 (异步模式：{self._async_processing}, 监控模式：{self._monitoring_mode})"
         )
         return True
 
@@ -441,7 +550,7 @@ class ClipboardMonitor:
         if not self._is_running:
             return
 
-        print("杂鱼♡～正在停止监控器喵～")
+        self.logger.info("正在停止监控器")
         self._stop_event.set()
 
         # 杂鱼♡～如果窗口存在，发送WM_QUIT消息中断消息循环喵～
@@ -464,6 +573,15 @@ class ClipboardMonitor:
             self._thread.join(timeout=3.0)  # 杂鱼♡～增加超时时间喵～
             if self._thread.is_alive():
                 print("杂鱼♡～线程在3秒内未能正常退出喵～")
+
+        # 杂鱼♡～清理智能源追踪器喵～
+        if self._enable_source_tracking:
+            if self._use_optimized_tracker:
+                print("杂鱼♡～正在清理集成式智能源追踪功能喵～")
+                OptimizedSourceTracker.cleanup_integrated_tracking()
+            else:
+                print("杂鱼♡～正在清理传统智能源追踪功能喵～")
+                SourceTracker.cleanup_focus_tracking()
 
         # 杂鱼♡～清理窗口资源喵～
         if self._hwnd:
@@ -506,7 +624,7 @@ class ClipboardMonitor:
                 from ci_board.utils.win32_api import Win32API
 
                 if message == Win32API.WM_CLIPBOARDUPDATE:
-                    print("杂鱼♡～收到剪贴板更新消息喵～")
+                    self.logger.debug("收到剪贴板更新消息")
                     self._on_clipboard_update()
 
             # 杂鱼♡～添加剪贴板监听器和回调喵～
@@ -518,6 +636,11 @@ class ClipboardMonitor:
                 self._hwnd = None
                 self._window_creation_success.set()
                 return
+
+            # 杂鱼♡～设置集成式焦点跟踪喵～
+            if self._enable_source_tracking and self._use_optimized_tracker:
+                if not OptimizedSourceTracker.initialize_integrated_tracking(None):
+                    print("杂鱼♡～警告：集成式焦点跟踪初始化失败喵～")
 
             # 杂鱼♡～通知主线程窗口创建成功喵～
             self._window_creation_success.set()
@@ -538,12 +661,31 @@ class ClipboardMonitor:
     def _on_clipboard_update(self) -> None:
         """杂鱼♡～处理剪贴板更新事件喵～"""
         try:
+            # 杂鱼♡～检查序列号变化，避免处理重复消息喵～
+            current_seq = ClipboardUtils.get_clipboard_sequence_number()
+            if current_seq == self._last_sequence_number:
+                # 杂鱼♡～序列号没变化，可能是重复消息，跳过处理喵～
+                return
+            
+            # 杂鱼♡～检测内容类型，为图片内容增加额外延迟喵～
+            content_type_detected = ClipboardUtils.detect_content_type()
+            if content_type_detected == "image":
+                # 杂鱼♡～图片内容需要更多时间准备，稍微等待一下喵～
+                time.sleep(0.05)  # 杂鱼♡～50ms延迟，让剪贴板完全准备好喵～
+            
             # 杂鱼♡～获取新内容和源信息喵～
             if self._enable_source_tracking:
-                content_type, content, source_info = (
-                    ClipboardUtils.get_clipboard_content(with_source=True)
-                )
-                current_content = (content_type, content)
+                if self._use_optimized_tracker:
+                    # 杂鱼♡～使用优化的源追踪器，避免剪贴板访问竞争喵～
+                    content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
+                    current_content = (content_type, content)
+                    # 杂鱼♡～安全获取源信息，避免剪贴板访问冲突喵～
+                    source_info = OptimizedSourceTracker.get_optimized_source_info(avoid_clipboard_access=True)
+                else:
+                    content_type, content, source_info = (
+                        ClipboardUtils.get_clipboard_content(with_source=True)
+                    )
+                    current_content = (content_type, content)
             else:
                 content_type, content, source_info = (
                     ClipboardUtils.get_clipboard_content(with_source=False)
@@ -556,6 +698,7 @@ class ClipboardMonitor:
                 if not self._is_content_duplicate(current_content):
                     self._handle_clipboard_change(current_content, source_info)
                     self._last_content = current_content
+                    self._last_sequence_number = current_seq
 
         except Exception as e:
             print(f"杂鱼♡～处理剪贴板更新时出错喵：{e}")
@@ -596,11 +739,18 @@ class ClipboardMonitor:
                 if current_seq != self._last_sequence_number:
                     # 杂鱼♡～序列号变化了，获取新内容和源信息喵～
                     if self._enable_source_tracking:
-                        # 杂鱼♡～使用增强版本获取内容和源信息喵～
-                        content_type, content, source_info = (
-                            ClipboardUtils.get_clipboard_content(with_source=True)
-                        )
-                        current_content = (content_type, content)
+                        if self._use_optimized_tracker:
+                            # 杂鱼♡～使用优化的源追踪器，避免剪贴板访问竞争喵～
+                            content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
+                            current_content = (content_type, content)
+                            # 杂鱼♡～安全获取源信息，避免剪贴板访问冲突喵～
+                            source_info = OptimizedSourceTracker.get_optimized_source_info(avoid_clipboard_access=True)
+                        else:
+                            # 杂鱼♡～使用传统版本获取内容和源信息喵～
+                            content_type, content, source_info = (
+                                ClipboardUtils.get_clipboard_content(with_source=True)
+                            )
+                            current_content = (content_type, content)
                     else:
                         # 杂鱼♡～只获取内容，不获取源信息喵～
                         content_type, content, source_info = (
@@ -671,13 +821,25 @@ class ClipboardMonitor:
             ),  # 杂鱼♡～显示哈希前8位喵～
             "cache_size": len(self._content_cache),
             "source_tracking_enabled": self._enable_source_tracking,  # 杂鱼♡～显示源追踪状态喵～
+            "optimized_tracker_enabled": self._use_optimized_tracker,  # 杂鱼♡～显示是否使用优化追踪器喵～
+            "focus_tracking_status": (
+                OptimizedSourceTracker.get_focus_status() if (self._enable_source_tracking and self._use_optimized_tracker)
+                else SourceTracker.get_focus_status() if self._enable_source_tracking
+                else None
+            ),  # 杂鱼♡～显示焦点跟踪状态喵～
             "async_stats": self.get_async_stats(),
         }
 
     def get_current_clipboard(self) -> tuple:
         """杂鱼♡～获取当前剪贴板内容喵～"""
         if self._enable_source_tracking:
-            return ClipboardUtils.get_clipboard_content(with_source=True)
+            if self._use_optimized_tracker:
+                # 杂鱼♡～使用优化的源追踪器，避免剪贴板访问竞争喵～
+                content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
+                source_info = OptimizedSourceTracker.get_optimized_source_info(avoid_clipboard_access=True)
+                return (content_type, content, source_info)
+            else:
+                return ClipboardUtils.get_clipboard_content(with_source=True)
         else:
             content_type, content, source_info = ClipboardUtils.get_clipboard_content(
                 with_source=False

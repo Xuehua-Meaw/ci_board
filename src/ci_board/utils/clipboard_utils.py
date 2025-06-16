@@ -72,14 +72,19 @@ class ClipboardUtils:
         cls, retry_count: int = None, timeout: float = None, with_source: bool = False
     ) -> Tuple[Optional[str], Any, Optional[Dict[str, Any]]]:
         """杂鱼♡～获取剪贴板内容和类型（增强版）喵～"""
+        # 杂鱼♡～如果需要源信息，先获取源应用信息，避免和内容读取竞争喵～
+        source_info = None
+        if with_source:
+            try:
+                source_info = SourceTracker.get_source_application_info()
+            except Exception as e:
+                print(f"杂鱼♡～获取源信息时出错喵：{e}")
+                source_info = None
+        
+        # 杂鱼♡～然后获取剪贴板内容喵～
         content_type, content = ClipboardReader.get_clipboard_content(
             retry_count, timeout
         )
-        source_info = None
-
-        # 杂鱼♡～如果需要源信息，则获取源应用信息喵～
-        if with_source:
-            source_info = SourceTracker.get_source_application_info()
 
         return (content_type, content, source_info)
 

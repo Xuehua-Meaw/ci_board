@@ -1,6 +1,6 @@
 [project]
 name = "ci-board"
-version = "0.0.3"
+version = "0.0.4"
 description = "杂鱼♡～本喵设计的高扩展性剪贴板监控包喵～"
 readme = "README.md"
 requires-python = ">=3.8"

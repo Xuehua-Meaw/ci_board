@@ -7,7 +7,8 @@ from ci_board import (
     create_monitor,
     create_text_handler,
     create_image_handler,
-    create_file_handler
+    create_file_handler,
+    BMPData
 )
 from ci_board.handlers.text_handler import SourceApplicationFilter
 from ci_board.handlers.image_handler import SourceApplicationImageFilter
@@ -50,21 +51,20 @@ def advanced_text_callback(text, source_info=None):
 
     print("="*60)
 
-def advanced_image_callback(data, source_info=None):
+def advanced_image_callback(data: BMPData, source_info=None):
     """杂鱼♡～高级图片回调函数，展示源追踪功能喵～"""
     print("\n" + "="*60)
     print("杂鱼♡～检测到图片复制事件喵～")
     print("="*60)
 
     # 杂鱼♡～显示图片信息喵～
-    if isinstance(data, dict):
-        print(f"🖼️ 图片格式：{data.get('format', 'Unknown')}")
-        if 'size' in data:
-            print(f"📐 图片尺寸：{data['size'][0]}x{data['size'][1]}")
-        if 'bit_count' in data:
-            print(f"🎨 位深度：{data.get('bit_count', 'Unknown')} 位")
-        if 'file_size' in data:
-            print(f"💾 文件大小：{data.get('file_size', 'Unknown')} 字节")
+    if data.success:
+        print(f"📐 图片尺寸：{data.size[0]}x{data.size[1]}")
+        print(f"🎨 位深度：{data.bit_count} 位")
+        print(f"💾 文件大小：{len(data.data)} 字节")
+    else:
+        print(f"❌ 图片数据无效")
+
 
     # 杂鱼♡～详细显示源应用程序信息喵～
     if source_info:
@@ -144,7 +144,7 @@ def setup_source_filters():
 
     # 杂鱼♡～禁止来自浏览器的图片复制喵～
     no_browser_images_filter = SourceApplicationImageFilter(
-        blocked_processes=['chrome.exe', 'firefox.exe', 'edge.exe', 'brave.exe', 'opera.exe']
+        blocked_processes=['svchost.exe']
     )
 
     # 杂鱼♡～只允许来自文件管理器的文件复制喵～

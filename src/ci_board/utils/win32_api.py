@@ -19,7 +19,9 @@ class ClipboardFormat(Enum):
 class ClipboardError(Exception):
     """杂鱼♡～剪贴板操作异常喵～"""
 
-    pass
+    def __init__(self, message: str, error_code: int = None):
+        super().__init__(message)
+        self.error_code = error_code
 
 
 class ClipboardTimeout(ClipboardError):
@@ -186,6 +188,21 @@ class Win32API:
         cls.user32.GetForegroundWindow.argtypes = []
         cls.user32.GetForegroundWindow.restype = w.HWND
 
+        # 杂鱼♡～窗口状态检查函数喵～
+        cls.user32.IsWindow.argtypes = [w.HWND]
+        cls.user32.IsWindow.restype = w.BOOL
+
+        # 杂鱼♡～事件钩子相关函数喵～
+        WINEVENTPROC = ctypes.WINFUNCTYPE(None, w.HANDLE, w.DWORD, w.HWND, w.LONG, w.LONG, w.DWORD, w.DWORD)
+        cls.user32.SetWinEventHook.argtypes = [w.DWORD, w.DWORD, w.HANDLE, WINEVENTPROC, w.DWORD, w.DWORD, w.DWORD]
+        cls.user32.SetWinEventHook.restype = w.HANDLE
+        cls.user32.UnhookWinEvent.argtypes = [w.HANDLE]
+        cls.user32.UnhookWinEvent.restype = w.BOOL
+
+        # 杂鱼♡～进程路径查询函数喵～
+        cls.kernel32.QueryFullProcessImageNameW.argtypes = [w.HANDLE, w.DWORD, w.LPWSTR, ctypes.POINTER(w.DWORD)]
+        cls.kernel32.QueryFullProcessImageNameW.restype = w.BOOL
+
         # 杂鱼♡～Windows消息泵相关函数喵～
         cls.user32.GetMessageW.argtypes = [
             ctypes.POINTER(Win32Structures.MSG),
@@ -202,12 +219,12 @@ class Win32API:
             w.UINT,
         ]
         cls.user32.PeekMessageW.restype = w.BOOL
-        cls.user32.PostMessageW.argtypes = [w.HWND, w.UINT, w.WPARAM, w.LPARAM]
-        cls.user32.PostMessageW.restype = w.BOOL
         cls.user32.TranslateMessage.argtypes = [ctypes.POINTER(Win32Structures.MSG)]
         cls.user32.TranslateMessage.restype = w.BOOL
         cls.user32.DispatchMessageW.argtypes = [ctypes.POINTER(Win32Structures.MSG)]
         cls.user32.DispatchMessageW.restype = w.LPARAM
+        cls.user32.PostMessageW.argtypes = [w.HWND, w.UINT, w.WPARAM, w.LPARAM]
+        cls.user32.PostMessageW.restype = w.BOOL
 
         # 杂鱼♡～窗口过程相关函数喵～
         cls.user32.DefWindowProcW.argtypes = [w.HWND, w.UINT, w.WPARAM, w.LPARAM]

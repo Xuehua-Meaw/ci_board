@@ -6,7 +6,11 @@ import time
 # 杂鱼♡～杂鱼主人的路径设置，本喵勉强帮你修复了喵～
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from ci_board import create_monitor
+# 杂鱼♡～设置日志级别（可以改为quiet=True来减少输出）喵～
+from ci_board.utils.logger import setup_ci_board_logging
+setup_ci_board_logging(verbose=True)  # 杂鱼♡～可以改为quiet=True或debug=True喵～
+
+from ci_board import create_monitor, BMPData
 
 def on_text_change(text, source_info=None):
     """杂鱼♡～文本变化回调函数（支持源信息）喵～"""
@@ -27,34 +31,22 @@ def on_text_change(text, source_info=None):
 
     print("-" * 50)
 
-def on_image_change(data, source_info=None):
+def on_image_change(bData: BMPData, source_info=None):
     """杂鱼♡～图片变化回调函数（支持源信息）喵～"""
     # print("杂鱼♡～检测到图片变化喵～")
     # print(f"数据类型：{type(data)}")
-
-    if isinstance(data, dict):
-        if 'format' in data and data['format'] == 'BMP':
-            # 杂鱼♡～这是BMP格式数据喵～
-            # print(f"杂鱼♡～BMP格式图片：{data['size'][0]}x{data['size'][1]}喵～")
-            # print(f"杂鱼♡～BMP数据大小：{len(data['data'])}字节喵～")
-
-            try:
-                from PIL import Image
-                import io
-                image = Image.open(io.BytesIO(data['data']))
-                print(f"杂鱼♡～成功打开图片：{image.mode} {image.size}喵～")
-                image.show()
-            except Exception as e:
-                print(f"杂鱼♡～PIL打开失败喵：{e}")
-
-        elif 'type' in data and data['type'] in ['DIB', 'BITMAP']:
-            # 杂鱼♡～这是原始数据，说明BMP转换失败了喵～
-            print(f"杂鱼♡～收到原始{data['type']}数据，BMP转换可能失败了喵～")
-            print(f"杂鱼♡～图片信息：{data.get('width', 0)}x{data.get('height', 0)}，位深{data.get('bit_count', 0)}喵～")
-        else:
-            print(f"杂鱼♡～未知数据格式喵～键：{list(data.keys()) if isinstance(data, dict) else 'N/A'}")
+    if bData.success:
+        try:
+            from PIL import Image
+            import io
+            image = Image.open(io.BytesIO(bData.data))
+            print(f"杂鱼♡～成功打开图片：{image.mode} {image.size}喵～")
+            print(f"杂鱼♡～BMP数据大小：{len(bData.data)}字节喵～")
+            image.show()
+        except Exception as e:
+            print(f"杂鱼♡～PIL打开失败喵：{e}")
     else:
-        print(f"杂鱼♡～意外的数据类型：{type(data)}喵～")
+        print(f"杂鱼♡～BMP转换失败，返回原始数据{len(bData.data)}字节喵～")
 
     # 杂鱼♡～显示源应用程序信息喵～
     if source_info:

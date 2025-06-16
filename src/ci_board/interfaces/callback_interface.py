@@ -98,16 +98,7 @@ class BaseClipboardHandler(CallbackInterface):
             return
 
         if self._callback:
-            # 杂鱼♡～检查回调函数是否支持源信息参数喵～
-            import inspect
-
-            sig = inspect.signature(self._callback)
-            if len(sig.parameters) >= 2:
-                # 杂鱼♡～新格式回调：(data, source_info)喵～
-                self._callback(data, source_info if self._include_source_info else None)
-            else:
-                # 杂鱼♡～旧格式回调：只有data参数喵～
-                self._callback(data)
+            self._callback(data, source_info if self._include_source_info else None)
         else:
             self._default_handle(data, source_info)
 

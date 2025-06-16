@@ -5,6 +5,7 @@ import datetime
 from typing import Any, Callable, Dict, Optional, Union
 
 from ..interfaces.callback_interface import BaseClipboardHandler
+from ..types.t_image import BMPData
 
 
 class BITMAP(ctypes.Structure):
@@ -42,55 +43,70 @@ class ImageHandler(BaseClipboardHandler):
 
     def handle(self, data: Any, source_info: Optional[Dict[str, Any]] = None) -> None:
         """杂鱼♡～重写handle方法，转换为BMP格式数据喵～"""
+        bData = BMPData(
+            success=False,
+            data=None,
+            size=(0, 0),
+            bit_count=0,
+            timestamp=str(datetime.datetime.now()),
+        )
         if not self._enabled:
             return
 
+        # 杂鱼♡～增强数据验证，避免处理None或无效数据喵～
+        if data is None:
+            # 杂鱼♡～数据为None，直接返回，不调用回调喵～
+            return
+            
         if not self.is_valid(data):
             return
 
         if not self._apply_filters(data):
             return
+        
+        # 杂鱼♡～将原始数据赋值给BMPData喵～
+        bData.data = data
 
         # 杂鱼♡～转换为BMP格式数据喵～
-        processed_data = self._convert_to_bmp_format(data)
+        try:
+            processed_data = self._convert_to_bmp_format(bData)
+            
+            # 杂鱼♡～如果转换失败，不调用回调函数喵～
+            if not processed_data or (hasattr(processed_data, 'success') and not processed_data.success):
+                return
+                
+        except Exception as e:
+            print(f"杂鱼♡～BMP转换过程出错喵：{e}")
+            return
 
         if self._callback:
-            # 杂鱼♡～检查回调函数是否支持源信息参数喵～
-            import inspect
-
-            sig = inspect.signature(self._callback)
-            if len(sig.parameters) >= 2:
-                # 杂鱼♡～新格式回调：(data, source_info)喵～
+            try:
+                # 杂鱼♡～检查回调函数是否支持源信息参数喵～
                 self._callback(
                     processed_data, source_info if self._include_source_info else None
                 )
-            else:
-                # 杂鱼♡～旧格式回调：只有data参数喵～
-                self._callback(processed_data)
+            except Exception as e:
+                print(f"杂鱼♡～图片处理回调函数出错喵：{e}")
         else:
             self._default_handle(processed_data, source_info)
 
-    def _convert_to_bmp_format(self, data: Any) -> Dict[str, Any]:
+    def _convert_to_bmp_format(self, bData: BMPData) -> BMPData:
         """杂鱼♡～转换为BMP格式数据喵～"""
-        if not isinstance(data, dict) or data.get("type") != "DIB":
-            return data
+        if not isinstance(bData.data, dict) or bData.data.get("type") != "DIB":
+            return bData
 
-        bmp_bytes = self._get_bmp_bytes(data)
+        bmp_bytes = self._get_bmp_bytes(bData.data)
         if bmp_bytes:
             # 杂鱼♡～返回BMP格式的数据结构喵～
-            return {
-                "format": "BMP",
-                "type": "BMP",
-                "data": bmp_bytes,
-                "size": (data.get("width", 0), data.get("height", 0)),
-                "bit_count": data.get("bit_count", 0),
-                "file_size": len(bmp_bytes),
-                "timestamp": str(datetime.datetime.now()),
-            }
+            bData.success = True
+            bData.data = bmp_bytes
+            bData.size = (int.from_bytes(bmp_bytes[4:8], "little", signed=True), int.from_bytes(bmp_bytes[8:12], "little", signed=True))
+            bData.bit_count = int.from_bytes(bmp_bytes[14:16], "little")
+            return bData
         else:
             # 杂鱼♡～BMP转换失败，返回原始数据喵～
             print("杂鱼♡～BMP转换失败，返回原始数据喵～")
-            return data
+            return bData
 
     def is_valid(self, data: Any) -> bool:
         """杂鱼♡～检查图片数据是否有效喵～"""
@@ -111,26 +127,23 @@ class ImageHandler(BaseClipboardHandler):
         return False
 
     def _default_handle(
-        self, data: Any, source_info: Optional[Dict[str, Any]] = None
+        self, bData: BMPData, source_info: Optional[Dict[str, Any]] = None
     ) -> None:
         """杂鱼♡～默认的图片处理方法喵～"""
-        if not self.is_valid(data):
+        if not self.is_valid(bData.data):
             print("杂鱼♡～无效的图片数据喵～")
             return
 
         print("杂鱼♡～检测到图片变化喵～")
 
         # 杂鱼♡～显示BMP格式图片信息喵～
-        if isinstance(data, dict):
-            if data.get("format") == "BMP":
-                print(f"杂鱼♡～BMP格式图片：{data['size'][0]}x{data['size'][1]}喵～")
-                print(f"杂鱼♡～BMP文件大小：{data.get('file_size', 0)}字节喵～")
-            else:
-                # 杂鱼♡～原始格式或未知格式喵～
-                image_info = self.get_image_info(data, source_info)
-                print(
-                    f"杂鱼♡～原始图片信息：{image_info['width']}x{image_info['height']} {image_info['format']}喵～"
-                )
+        if bData.success:
+            print(f"杂鱼♡～BMP格式图片：{bData.size[0]}x{bData.size[1]}喵～")
+            print(f"杂鱼♡～BMP文件大小：{len(bData.data)}字节喵～")
+        else:
+            print("杂鱼♡～BMP转换失败，返回原始数据喵～")
+            return
+
 
         # 杂鱼♡～显示源应用程序信息喵～
         if source_info and self._include_source_info:
