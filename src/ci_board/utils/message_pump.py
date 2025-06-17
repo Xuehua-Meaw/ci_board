@@ -8,7 +8,7 @@ from .logger import get_component_logger
 from .win32_api import Win32API, Win32Structures
 
 # 杂鱼♡～获取组件专用logger喵～
-logger = get_component_logger('utils.message_pump')
+logger = get_component_logger("utils.message_pump")
 
 
 class MessagePump:

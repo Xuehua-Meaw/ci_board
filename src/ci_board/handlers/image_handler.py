@@ -1,13 +1,13 @@
 # 杂鱼♡～本喵的图片处理器喵～
 import datetime
 from typing import Any, Callable, Dict, Optional, Union
-from ..types import ProcessInfo, BMPData
 
 from ..interfaces.callback_interface import BaseClipboardHandler
+from ..types import BMPData, ProcessInfo
 from ..utils.logger import get_component_logger
 
 # 杂鱼♡～获取组件专用logger喵～
-logger = get_component_logger('handlers.image_handler')
+logger = get_component_logger("handlers.image_handler")
 
 # 杂鱼♡～Windows GDI常量喵～
 DIB_RGB_COLORS = 0
@@ -62,7 +62,9 @@ class ImageHandler(BaseClipboardHandler):
             processed_data = self._convert_to_bmp_format(bData)
 
             # 杂鱼♡～如果转换失败，不调用回调函数喵～
-            if not processed_data or (hasattr(processed_data, 'success') and not processed_data.success):
+            if not processed_data or (
+                hasattr(processed_data, "success") and not processed_data.success
+            ):
                 return
 
         except Exception as e:
@@ -72,9 +74,7 @@ class ImageHandler(BaseClipboardHandler):
         if self._callback:
             try:
                 # 杂鱼♡～检查回调函数是否支持源信息参数喵～
-                self._callback(
-                    processed_data, source_info
-                )
+                self._callback(processed_data, source_info)
             except Exception as e:
                 logger.error(f"杂鱼♡～图片处理回调函数出错喵：{e}")
         else:

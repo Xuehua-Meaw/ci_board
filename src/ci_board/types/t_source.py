@@ -5,6 +5,7 @@ from dataclasses import dataclass
 @dataclass
 class ProcessInfo:
     """杂鱼♡～进程信息数据类喵～"""
+
     process_name: str
     process_path: str
     process_id: int

@@ -9,25 +9,25 @@ from typing import Optional
 
 # 杂鱼♡～控制台颜色常量喵～
 class Colors:
-    BLACK = '\033[30m'
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    BLUE = '\033[34m'
-    MAGENTA = '\033[35m'
-    CYAN = '\033[36m'
-    WHITE = '\033[37m'
-    BRIGHT_BLACK = '\033[90m'
-    BRIGHT_RED = '\033[91m'
-    BRIGHT_GREEN = '\033[92m'
-    BRIGHT_YELLOW = '\033[93m'
-    BRIGHT_BLUE = '\033[94m'
-    BRIGHT_MAGENTA = '\033[95m'
-    BRIGHT_CYAN = '\033[96m'
-    BRIGHT_WHITE = '\033[97m'
-    RESET = '\033[0m'
-    BOLD = '\033[1m'
-    DIM = '\033[2m'
+    BLACK = "\033[30m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    MAGENTA = "\033[35m"
+    CYAN = "\033[36m"
+    WHITE = "\033[37m"
+    BRIGHT_BLACK = "\033[90m"
+    BRIGHT_RED = "\033[91m"
+    BRIGHT_GREEN = "\033[92m"
+    BRIGHT_YELLOW = "\033[93m"
+    BRIGHT_BLUE = "\033[94m"
+    BRIGHT_MAGENTA = "\033[95m"
+    BRIGHT_CYAN = "\033[96m"
+    BRIGHT_WHITE = "\033[97m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
 
 
 # 杂鱼♡～日志级别枚举喵～
@@ -56,12 +56,12 @@ class ColoredFormatter(logging.Formatter):
 
         # 杂鱼♡～格式化时间戳喵～
         dt = datetime.fromtimestamp(record.created)
-        timestamp = dt.strftime('%H:%M:%S.%f')[:-3]  # 杂鱼♡～保留毫秒喵～
+        timestamp = dt.strftime("%H:%M:%S.%f")[:-3]  # 杂鱼♡～保留毫秒喵～
 
         # 杂鱼♡～构建日志消息喵～
-        module_name = record.name.replace('ci_board.', '')
+        module_name = record.name.replace("ci_board.", "")
         if len(module_name) > 20:
-            module_name = '...' + module_name[-17:]
+            module_name = "..." + module_name[-17:]
 
         formatted = f"{Colors.DIM}[{timestamp}]{Colors.RESET} "
         formatted += f"{color}[{record.levelname:>7}]{Colors.RESET} "
@@ -70,7 +70,7 @@ class ColoredFormatter(logging.Formatter):
 
         # 杂鱼♡～添加异常信息喵～
         if record.exc_info:
-            formatted += '\n' + self.formatException(record.exc_info)
+            formatted += "\n" + self.formatException(record.exc_info)
 
         return formatted
 
@@ -79,12 +79,12 @@ def setup_ci_board_logging(
     debug: bool = False,
     log_file: Optional[str] = None,
     console_level: Optional[LogLevel] = None,
-    file_level: Optional[LogLevel] = None
+    file_level: Optional[LogLevel] = None,
 ) -> logging.Logger:
     """杂鱼♡～设置ci_board日志系统喵～"""
 
     # 杂鱼♡～获取根日志器喵～
-    logger = logging.getLogger('ci_board')
+    logger = logging.getLogger("ci_board")
     logger.setLevel(logging.DEBUG)
 
     # 杂鱼♡～清除现有处理器喵～
@@ -108,12 +108,12 @@ def setup_ci_board_logging(
     if log_file:
         try:
             os.makedirs(os.path.dirname(log_file), exist_ok=True)
-            file_handler = logging.FileHandler(log_file, encoding='utf-8')
+            file_handler = logging.FileHandler(log_file, encoding="utf-8")
             file_handler.setLevel(file_log_level)
 
             file_formatter = logging.Formatter(
-                '[%(asctime)s] [%(levelname)8s] %(name)s: %(message)s',
-                datefmt='%Y-%m-%d %H:%M:%S'
+                "[%(asctime)s] [%(levelname)8s] %(name)s: %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
             )
             file_handler.setFormatter(file_formatter)
             logger.addHandler(file_handler)
@@ -131,34 +131,34 @@ def setup_ci_board_logging(
 
 def get_logger(name: str) -> logging.Logger:
     """杂鱼♡～获取子模块logger喵～"""
-    if not name.startswith('ci_board.'):
-        name = f'ci_board.{name}'
+    if not name.startswith("ci_board."):
+        name = f"ci_board.{name}"
     return logging.getLogger(name)
 
 
 def get_component_logger(component_name: str) -> logging.Logger:
     """杂鱼♡～获取组件专用logger喵～"""
-    if not component_name.startswith('ci_board.'):
-        component_name = f'ci_board.{component_name}'
+    if not component_name.startswith("ci_board."):
+        component_name = f"ci_board.{component_name}"
     return logging.getLogger(component_name)
 
 
 # 杂鱼♡～导出常用的日志函数喵～
 def debug(msg, *args, **kwargs):
-    get_logger('main').debug(msg, *args, **kwargs)
+    get_logger("main").debug(msg, *args, **kwargs)
 
 
 def info(msg, *args, **kwargs):
-    get_logger('main').info(msg, *args, **kwargs)
+    get_logger("main").info(msg, *args, **kwargs)
 
 
 def warning(msg, *args, **kwargs):
-    get_logger('main').warning(msg, *args, **kwargs)
+    get_logger("main").warning(msg, *args, **kwargs)
 
 
 def error(msg, *args, **kwargs):
-    get_logger('main').error(msg, *args, **kwargs)
+    get_logger("main").error(msg, *args, **kwargs)
 
 
 def critical(msg, *args, **kwargs):
-    get_logger('main').critical(msg, *args, **kwargs)
+    get_logger("main").critical(msg, *args, **kwargs)

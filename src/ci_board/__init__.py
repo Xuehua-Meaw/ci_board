@@ -7,8 +7,8 @@
 from .core.monitor import ClipboardMonitor
 from .handlers import FileHandler, ImageHandler, TextHandler
 from .interfaces import CallbackInterface
-from .utils import ClipboardUtils
 from .types import BMPData, ProcessInfo
+from .utils import ClipboardUtils
 
 __author__ = "Neko"
 __version__ = "0.0.6"

@@ -1,14 +1,19 @@
 # 杂鱼♡～本喵为杂鱼主人创建的剪贴板数据读取器喵～
 import ctypes
 import ctypes.wintypes as w
+import random
 import threading
 import time
-import random
 from typing import Any, Callable, Dict, List, Optional
 
-from .win32_api import (ClipboardError, ClipboardFormat, ClipboardTimeout,
-                        Win32API, Win32Structures)
 from .logger import get_component_logger
+from .win32_api import (
+    ClipboardError,
+    ClipboardFormat,
+    ClipboardTimeout,
+    Win32API,
+    Win32Structures,
+)
 
 
 class ClipboardReader:
@@ -49,7 +54,10 @@ class ClipboardReader:
                 result = operation()
 
                 # 杂鱼♡～特别处理图片操作的返回值喵～
-                if hasattr(operation, '__name__') and 'image' in operation.__name__.lower():
+                if (
+                    hasattr(operation, "__name__")
+                    and "image" in operation.__name__.lower()
+                ):
                     # 杂鱼♡～如果是图片操作且返回None，可能需要再试一次喵～
                     if result is None and attempt < retry_count - 1:
                         # 杂鱼♡～给剪贴板更多时间准备数据喵～
@@ -61,20 +69,24 @@ class ClipboardReader:
                 last_exception = e
 
                 # 杂鱼♡～如果是访问拒绝错误（错误码5），使用智能延迟喵～
-                if hasattr(e, 'args') and 'error_code' in str(e) and '5' in str(e):
+                if hasattr(e, "args") and "error_code" in str(e) and "5" in str(e):
                     # 杂鱼♡～指数退避 + 随机抖动，避免多个进程同时重试喵～
-                    base_delay = retry_delay * (2 ** attempt)
-                    jitter = random.uniform(0.0, base_delay * 0.3)  # 杂鱼♡～30%的随机抖动喵～
+                    base_delay = retry_delay * (2**attempt)
+                    jitter = random.uniform(
+                        0.0, base_delay * 0.3
+                    )  # 杂鱼♡～30%的随机抖动喵～
                     actual_delay = base_delay + jitter
 
                     # 杂鱼♡～限制最大延迟喵～
                     actual_delay = min(actual_delay, 0.5)  # 杂鱼♡～最多500ms喵～
 
                     if attempt < retry_count - 1:
-                        cls._logger.debug(f"杂鱼♡～剪贴板被占用，{actual_delay:.3f}s后重试 (第{attempt+1}次)喵～")
+                        cls._logger.debug(
+                            f"杂鱼♡～剪贴板被占用，{actual_delay:.3f}s后重试 (第{attempt+1}次)喵～"
+                        )
                         time.sleep(actual_delay)
                         continue
-                elif 'MemoryError' in str(e) or 'OSError' in str(e):
+                elif "MemoryError" in str(e) or "OSError" in str(e):
                     # 杂鱼♡～内存相关错误，稍微等久一点喵～
                     if attempt < retry_count - 1:
                         time.sleep(retry_delay * 3)
@@ -88,7 +100,7 @@ class ClipboardReader:
 
         if last_exception:
             # 杂鱼♡～只在最后一次失败时记录错误，避免日志污染喵～
-            if 'error_code' in str(last_exception) and '5' in str(last_exception):
+            if "error_code" in str(last_exception) and "5" in str(last_exception):
                 cls._logger.warning("剪贴板访问最终失败，可能被其他程序占用")
             else:
                 cls._logger.error(f"剪贴板操作失败: {last_exception}")
@@ -102,7 +114,10 @@ class ClipboardReader:
             if not result:
                 error_code = Win32API.kernel32.GetLastError()
                 # 杂鱼♡～创建带错误码的异常，方便重试逻辑识别喵～
-                raise ClipboardError(f"杂鱼♡～打开剪贴板失败，错误码：{error_code}喵～", error_code=error_code)
+                raise ClipboardError(
+                    f"杂鱼♡～打开剪贴板失败，错误码：{error_code}喵～",
+                    error_code=error_code,
+                )
             return result
         except ClipboardError:
             raise
@@ -221,9 +236,9 @@ class ClipboardReader:
             CF_DIBV5 = 17
 
             has_image = (
-                Win32API.user32.IsClipboardFormatAvailable(CF_DIB) or
-                Win32API.user32.IsClipboardFormatAvailable(CF_DIBV5) or
-                cls.is_format_available(ClipboardFormat.BITMAP)
+                Win32API.user32.IsClipboardFormatAvailable(CF_DIB)
+                or Win32API.user32.IsClipboardFormatAvailable(CF_DIBV5)
+                or cls.is_format_available(ClipboardFormat.BITMAP)
             )
 
             if not has_image:
@@ -239,12 +254,20 @@ class ClipboardReader:
                     image_data = None
 
                     # 杂鱼♡～按优先级尝试不同格式，在同一个剪贴板会话中喵～
-                    for format in [ClipboardFormat.CF_DIBV5, ClipboardFormat.CF_DIB, ClipboardFormat.BITMAP]:
+                    for format in [
+                        ClipboardFormat.CF_DIBV5,
+                        ClipboardFormat.CF_DIB,
+                        ClipboardFormat.BITMAP,
+                    ]:
                         if cls.is_format_available(format):
                             try:
                                 cls._logger.debug(f"杂鱼♡～尝试读取{format}格式喵～")
                                 image_data = cls._get_dib_data_internal(format.value)
-                                if image_data and image_data.get("width", 0) > 0 and image_data.get("height", 0) > 0:
+                                if (
+                                    image_data
+                                    and image_data.get("width", 0) > 0
+                                    and image_data.get("height", 0) > 0
+                                ):
                                     return image_data
                             except Exception as e:
                                 cls._logger.debug(f"{format}格式读取失败: {e}")
@@ -259,8 +282,9 @@ class ClipboardReader:
         # 杂鱼♡～使用更智能的重试机制，专门针对图片读取优化喵～
         return cls._with_retry(
             _get_image,
-            retry_count or cls.DEFAULT_RETRY_COUNT + 2,  # 杂鱼♡～图片读取增加重试次数喵～
-            timeout=timeout or cls.DEFAULT_TIMEOUT * 1.5  # 杂鱼♡～增加超时时间喵～
+            retry_count
+            or cls.DEFAULT_RETRY_COUNT + 2,  # 杂鱼♡～图片读取增加重试次数喵～
+            timeout=timeout or cls.DEFAULT_TIMEOUT * 1.5,  # 杂鱼♡～增加超时时间喵～
         )
 
     @classmethod
@@ -283,7 +307,9 @@ class ClipboardReader:
 
                 # 杂鱼♡～验证头部数据的合理性喵～
                 if header.biWidth <= 0 or abs(header.biHeight) <= 0:
-                    cls._logger.warning(f"无效的图片尺寸: {header.biWidth}x{header.biHeight}")
+                    cls._logger.warning(
+                        f"无效的图片尺寸: {header.biWidth}x{header.biHeight}"
+                    )
                     return None
 
                 # 杂鱼♡～检查是否为合理的位深度喵～
@@ -345,7 +371,9 @@ class ClipboardReader:
             if result > 0:
                 # 杂鱼♡～验证位图数据的合理性喵～
                 if bitmap_info.bmWidth <= 0 or bitmap_info.bmHeight <= 0:
-                    cls._logger.warning(f"无效的位图尺寸: {bitmap_info.bmWidth}x{bitmap_info.bmHeight}")
+                    cls._logger.warning(
+                        f"无效的位图尺寸: {bitmap_info.bmWidth}x{bitmap_info.bmHeight}"
+                    )
                     return None
 
                 # 杂鱼♡～检查是否为合理的位深度喵～

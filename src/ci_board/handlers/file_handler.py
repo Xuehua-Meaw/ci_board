@@ -1,12 +1,12 @@
 # 杂鱼♡～本喵的文件处理器喵～
 from typing import Callable, List, Optional
-from ..types import ProcessInfo
 
 from ..interfaces.callback_interface import BaseClipboardHandler
+from ..types import ProcessInfo
 from ..utils.logger import get_component_logger
 
 # 杂鱼♡～获取组件专用logger喵～
-logger = get_component_logger('handlers.file_handler')
+logger = get_component_logger("handlers.file_handler")
 
 
 class FileHandler(BaseClipboardHandler):

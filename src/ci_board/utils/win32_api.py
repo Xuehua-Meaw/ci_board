@@ -189,14 +189,29 @@ class Win32API:
         cls.user32.IsWindow.restype = w.BOOL
 
         # 杂鱼♡～事件钩子相关函数喵～
-        WINEVENTPROC = ctypes.WINFUNCTYPE(None, w.HANDLE, w.DWORD, w.HWND, w.LONG, w.LONG, w.DWORD, w.DWORD)
-        cls.user32.SetWinEventHook.argtypes = [w.DWORD, w.DWORD, w.HANDLE, WINEVENTPROC, w.DWORD, w.DWORD, w.DWORD]
+        WINEVENTPROC = ctypes.WINFUNCTYPE(
+            None, w.HANDLE, w.DWORD, w.HWND, w.LONG, w.LONG, w.DWORD, w.DWORD
+        )
+        cls.user32.SetWinEventHook.argtypes = [
+            w.DWORD,
+            w.DWORD,
+            w.HANDLE,
+            WINEVENTPROC,
+            w.DWORD,
+            w.DWORD,
+            w.DWORD,
+        ]
         cls.user32.SetWinEventHook.restype = w.HANDLE
         cls.user32.UnhookWinEvent.argtypes = [w.HANDLE]
         cls.user32.UnhookWinEvent.restype = w.BOOL
 
         # 杂鱼♡～进程路径查询函数喵～
-        cls.kernel32.QueryFullProcessImageNameW.argtypes = [w.HANDLE, w.DWORD, w.LPWSTR, ctypes.POINTER(w.DWORD)]
+        cls.kernel32.QueryFullProcessImageNameW.argtypes = [
+            w.HANDLE,
+            w.DWORD,
+            w.LPWSTR,
+            ctypes.POINTER(w.DWORD),
+        ]
         cls.kernel32.QueryFullProcessImageNameW.restype = w.BOOL
 
         # 杂鱼♡～Windows消息泵相关函数喵～

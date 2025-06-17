@@ -3,11 +3,16 @@
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from ..core.source_tracker_ import SourceTracker
 from .clipboard_reader import ClipboardReader
 from .message_pump import MessagePump
-from .win32_api import (ClipboardAccessDenied, ClipboardError, ClipboardFormat,
-                        ClipboardTimeout, Win32API)
-from ..core.source_tracker_ import SourceTracker
+from .win32_api import (
+    ClipboardAccessDenied,
+    ClipboardError,
+    ClipboardFormat,
+    ClipboardTimeout,
+    Win32API,
+)
 
 
 class ClipboardUtils:
@@ -76,7 +81,9 @@ class ClipboardUtils:
         source_info = None
         if with_source:
             try:
-                source_info = SourceTracker.get_source_info(avoid_clipboard_access=False)
+                source_info = SourceTracker.get_source_info(
+                    avoid_clipboard_access=False
+                )
             except Exception as e:
                 cls.logger.error(f"杂鱼♡～获取源信息时出错喵：{e}")
                 source_info = None

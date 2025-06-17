@@ -198,7 +198,9 @@ class ClipboardMonitor:
                 # 杂鱼♡～检查超时喵～
                 handler, content_type, start_time = futures[future]
                 if time.time() - start_time > self._handler_timeout:
-                    self.logger.warning(f"杂鱼♡～处理器超时了喵：{type(handler).__name__} ({content_type})")
+                    self.logger.warning(
+                        f"杂鱼♡～处理器超时了喵：{type(handler).__name__} ({content_type})"
+                    )
                     future.cancel()
                     completed_futures.append(future)
                     self._async_stats["tasks_timeout"] += 1
@@ -216,7 +218,9 @@ class ClipboardMonitor:
                     self._async_stats["tasks_failed"] += 1
         except Exception as e:
             handler, content_type, _ = futures[future]
-            self.logger.error(f"杂鱼♡～异步处理器出错了喵：{type(handler).__name__} ({content_type}) - {e}")
+            self.logger.error(
+                f"杂鱼♡～异步处理器出错了喵：{type(handler).__name__} ({content_type}) - {e}"
+            )
             self._async_stats["tasks_failed"] += 1
         finally:
             del futures[future]
@@ -229,7 +233,9 @@ class ClipboardMonitor:
         for future in futures.keys():
             future.cancel()
 
-    def _convert_source_info_to_process_info(self, source_info: Optional[Dict[str, Any]]) -> Optional[ProcessInfo]:
+    def _convert_source_info_to_process_info(
+        self, source_info: Optional[Dict[str, Any]]
+    ) -> Optional[ProcessInfo]:
         """杂鱼♡～将dict格式的source_info转换为ProcessInfo实例喵～"""
         if not source_info or not isinstance(source_info, dict):
             return None
@@ -237,16 +243,16 @@ class ClipboardMonitor:
         try:
             # 杂鱼♡～创建ProcessInfo实例，提供所有必需字段的默认值喵～
             return ProcessInfo(
-                process_name=source_info.get('process_name', 'Unknown'),
-                process_path=source_info.get('process_path', ''),
-                process_id=source_info.get('process_id', 0),
-                window_title=source_info.get('window_title', ''),
-                window_class=source_info.get('window_class', ''),
-                detection_method=source_info.get('detection_method', 'unknown'),
-                confidence_level=source_info.get('confidence_level', 'unknown'),
-                is_system_process=source_info.get('is_system_process', False),
-                is_screenshot_tool=source_info.get('is_screenshot_tool', False),
-                timestamp=source_info.get('timestamp', time.time())
+                process_name=source_info.get("process_name", "Unknown"),
+                process_path=source_info.get("process_path", ""),
+                process_id=source_info.get("process_id", 0),
+                window_title=source_info.get("window_title", ""),
+                window_class=source_info.get("window_class", ""),
+                detection_method=source_info.get("detection_method", "unknown"),
+                confidence_level=source_info.get("confidence_level", "unknown"),
+                is_system_process=source_info.get("is_system_process", False),
+                is_screenshot_tool=source_info.get("is_screenshot_tool", False),
+                timestamp=source_info.get("timestamp", time.time()),
             )
         except Exception as e:
             self.logger.error(f"杂鱼♡～转换source_info为ProcessInfo失败喵：{e}")
@@ -453,8 +459,8 @@ class ClipboardMonitor:
                 # 杂鱼♡～固定位置采样（避免随机性导致不一致）喵～
                 quarter_pos = data_size // 4
                 three_quarter_pos = data_size * 3 // 4
-                sample_points.append(data[quarter_pos:quarter_pos+256])
-                sample_points.append(data[three_quarter_pos:three_quarter_pos+256])
+                sample_points.append(data[quarter_pos : quarter_pos + 256])
+                sample_points.append(data[three_quarter_pos : three_quarter_pos + 256])
 
                 # 杂鱼♡～计算所有样本的组合哈希喵～
                 combined_samples = b"".join(sample_points)
@@ -472,8 +478,8 @@ class ClipboardMonitor:
                     # 杂鱼♡～长字符串也采用采样策略喵～
                     samples = [
                         data_str[:512],
-                        data_str[len(data_str)//2-256:len(data_str)//2+256],
-                        data_str[-512:]
+                        data_str[len(data_str) // 2 - 256 : len(data_str) // 2 + 256],
+                        data_str[-512:],
                     ]
                     combined = "".join(samples)
                     data_hash = hashlib.md5(combined.encode()).hexdigest()
@@ -508,12 +514,16 @@ class ClipboardMonitor:
             if content_type == "image":
                 threshold = 3.0  # 杂鱼♡～图片3秒内的重复内容忽略喵～
                 if time_diff < threshold:
-                    self.logger.debug(f"检测到重复图片内容，时间差{time_diff:.2f}s < {threshold}s，已跳过处理")
+                    self.logger.debug(
+                        f"检测到重复图片内容，时间差{time_diff:.2f}s < {threshold}s，已跳过处理"
+                    )
                     return True
             else:
                 threshold = 1.0  # 杂鱼♡～其他内容1秒内的重复内容忽略喵～
                 if time_diff < threshold:
-                    self.logger.debug(f"检测到重复{content_type}内容，时间差{time_diff:.2f}s < {threshold}s，已跳过处理")
+                    self.logger.debug(
+                        f"检测到重复{content_type}内容，时间差{time_diff:.2f}s < {threshold}s，已跳过处理"
+                    )
                     return True
 
         # 杂鱼♡～更新缓存喵～
@@ -680,7 +690,9 @@ class ClipboardMonitor:
             # 杂鱼♡～通知主线程窗口创建成功喵～
             self._window_creation_success.set()
 
-            self.logger.info(f"杂鱼♡～开始监控剪贴板变化喵～(模式：{self._monitoring_mode})")
+            self.logger.info(
+                f"杂鱼♡～开始监控剪贴板变化喵～(模式：{self._monitoring_mode})"
+            )
 
             if self._event_driven:
                 self._event_driven_monitor_loop()
@@ -711,7 +723,9 @@ class ClipboardMonitor:
             # 杂鱼♡～获取新内容和源信息喵～
             if self._enable_source_tracking:
                 # 杂鱼♡～使用统一的源追踪器，避免剪贴板访问竞争喵～
-                content_type, content, source_info = ClipboardUtils.get_clipboard_content(with_source=True)
+                content_type, content, source_info = (
+                    ClipboardUtils.get_clipboard_content(with_source=True)
+                )
                 current_content = (content_type, content)
             else:
                 content_type, content, source_info = (
@@ -767,10 +781,14 @@ class ClipboardMonitor:
                     # 杂鱼♡～序列号变化了，获取新内容和源信息喵～
                     if self._enable_source_tracking:
                         # 杂鱼♡～使用统一的源追踪器，避免剪贴板访问竞争喵～
-                        content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
+                        content_type, content, _ = ClipboardUtils.get_clipboard_content(
+                            with_source=False
+                        )
                         current_content = (content_type, content)
                         # 杂鱼♡～安全获取源信息，避免剪贴板访问冲突喵～
-                        source_info = SourceTracker.get_source_info(avoid_clipboard_access=True)
+                        source_info = SourceTracker.get_source_info(
+                            avoid_clipboard_access=True
+                        )
                     else:
                         # 杂鱼♡～只获取内容，不获取源信息喵～
                         content_type, content, source_info = (
@@ -851,7 +869,9 @@ class ClipboardMonitor:
         """杂鱼♡～获取当前剪贴板内容喵～"""
         if self._enable_source_tracking:
             # 杂鱼♡～使用统一的源追踪器，避免剪贴板访问竞争喵～
-            content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
+            content_type, content, _ = ClipboardUtils.get_clipboard_content(
+                with_source=False
+            )
             source_info = SourceTracker.get_source_info(avoid_clipboard_access=True)
             return (content_type, content, source_info)
         else:

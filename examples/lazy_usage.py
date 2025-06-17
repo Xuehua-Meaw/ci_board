@@ -4,13 +4,16 @@ import sys
 import time
 
 # 杂鱼♡～杂鱼主人的路径设置，本喵勉强帮你修复了喵～
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 # 杂鱼♡～设置日志级别（可以改为quiet=True来减少输出）喵～
-from ci_board.utils.logger import setup_ci_board_logging, LogLevel
-setup_ci_board_logging(console_level=LogLevel.DEBUG)  # 杂鱼♡～可以改为LogLevel.INFO来减少输出喵～
+from ci_board.utils.logger import LogLevel, setup_ci_board_logging
 
-from ci_board import create_monitor, BMPData, ProcessInfo
+setup_ci_board_logging(
+    console_level=LogLevel.DEBUG
+)  # 杂鱼♡～可以改为LogLevel.INFO来减少输出喵～
+
+from ci_board import BMPData, ProcessInfo, create_monitor
 
 
 def on_text_change(text, source_info: ProcessInfo):
@@ -32,8 +35,10 @@ def on_image_change(bData: BMPData, source_info: ProcessInfo):
     # print(f"数据类型：{type(data)}")
     if bData.success:
         try:
-            from PIL import Image
             import io
+
+            from PIL import Image
+
             image = Image.open(io.BytesIO(bData.data))
             print(f"杂鱼♡～成功打开图片：{image.width} {image.height}喵～")
             print(f"杂鱼♡～BMP数据大小：{len(bData.data)}字节喵～")
@@ -92,9 +97,9 @@ if __name__ == "__main__":
     # 杂鱼♡～懒人方式：直接传入回调函数喵～
     print("杂鱼♡～使用懒人API注册处理器喵～")
 
-    text_handler = monitor.add_handler('text', on_text_change)
-    image_handler = monitor.add_handler('image', on_image_change)
-    files_handler = monitor.add_handler('files', on_files_change)
+    text_handler = monitor.add_handler("text", on_text_change)
+    image_handler = monitor.add_handler("image", on_image_change)
+    files_handler = monitor.add_handler("files", on_files_change)
     # update_handler = monitor.add_handler('update', on_clipboard_update)
 
     print("杂鱼♡～自动创建的处理器类型：")

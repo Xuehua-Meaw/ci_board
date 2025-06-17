@@ -6,6 +6,7 @@ from typing import Union
 @dataclass
 class BMPData:
     """杂鱼♡～BMP格式的图片数据喵～"""
+
     success: bool
     data: Union[bytes, None]
     width: int
