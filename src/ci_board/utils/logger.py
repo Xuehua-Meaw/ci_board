@@ -136,6 +136,13 @@ def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
 
+def get_component_logger(component_name: str) -> logging.Logger:
+    """杂鱼♡～获取组件专用logger喵～"""
+    if not component_name.startswith('ci_board.'):
+        component_name = f'ci_board.{component_name}'
+    return logging.getLogger(component_name)
+
+
 # 杂鱼♡～导出常用的日志函数喵～
 def debug(msg, *args, **kwargs):
     get_logger('main').debug(msg, *args, **kwargs)

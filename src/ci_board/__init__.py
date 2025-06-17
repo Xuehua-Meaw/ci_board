@@ -1,19 +1,17 @@
 # 杂鱼♡～本喵设计的剪贴板监控包喵～
 """
-杂鱼♡～本喵的剪贴板监控包 v0.0.5
+杂鱼♡～本喵的剪贴板监控包 v0.0.6
 一个高扩展性的剪贴板监控解决方案喵～
 """
 
 from .core.monitor import ClipboardMonitor
-from .handlers.file_handler import FileHandler
-from .handlers.image_handler import ImageHandler
-from .handlers.text_handler import TextHandler
-from .interfaces.callback_interface import CallbackInterface
-from .utils.clipboard_utils import ClipboardUtils
-from .types.t_image import BMPData
+from .handlers import FileHandler, ImageHandler, TextHandler
+from .interfaces import CallbackInterface
+from .utils import ClipboardUtils
+from .types import BMPData, ProcessInfo
 
 __author__ = "Neko"
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 # 杂鱼♡～导出主要API，让杂鱼主人使用方便喵～
 
@@ -64,9 +62,10 @@ __all__ = [
     "FileHandler",
     "CallbackInterface",
     "ClipboardUtils",
-    "BMPData",
     "create_monitor",
     "create_text_handler",
     "create_image_handler",
     "create_file_handler",
+    "BMPData",
+    "ProcessInfo",
 ]

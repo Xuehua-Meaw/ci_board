@@ -12,12 +12,3 @@ class BMPData:
     height: int
     bit_count: int
     timestamp: str
-
-
-@dataclass
-class ImageFingerprint:
-    """杂鱼♡～图片指纹信息喵～"""
-    content_hash: str
-    visual_hash: str
-    size: tuple
-    format: str

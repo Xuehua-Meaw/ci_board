@@ -1,7 +1,12 @@
 # 杂鱼♡～本喵的文件处理器喵～
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, List, Optional
+from ..types import ProcessInfo
 
 from ..interfaces.callback_interface import BaseClipboardHandler
+from ..utils.logger import get_component_logger
+
+# 杂鱼♡～获取组件专用logger喵～
+logger = get_component_logger('handlers.file_handler')
 
 
 class FileHandler(BaseClipboardHandler):
@@ -83,44 +88,35 @@ class FileHandler(BaseClipboardHandler):
         return True
 
     def _default_handle(
-        self, data: List[str], source_info: Optional[Dict[str, Any]] = None
+        self, data: List[str], source_info: Optional[ProcessInfo] = None
     ) -> None:
         """杂鱼♡～默认的文件处理方法喵～"""
-        print("杂鱼♡～检测到文件变化喵：")
-        print(f"  文件数量：{len(data)}")
+        logger.info("杂鱼♡～检测到文件变化喵：")
+        logger.info(f"  文件数量：{len(data)}")
 
         for i, file_path in enumerate(data, 1):
             file_info = self.get_file_info(file_path)
-            print(f"  文件{i}：{file_info['name']} ({file_info['size']})")
+            logger.info(f"  文件{i}：{file_info['name']} ({file_info['size']})")
 
         # 杂鱼♡～显示源应用程序信息喵～
         if source_info and self._include_source_info:
-            process_name = source_info.get("process_name", "Unknown")
-            detection_method = source_info.get("detection_method", "unknown")
-            is_fallback = source_info.get("is_fallback", False)
+            process_name = source_info.process_name or "Unknown"
 
             # 杂鱼♡～根据不同情况显示不同的信息喵～
             if process_name == "Unknown":
-                print("  源应用程序：❓ 未知 (无法获取)")
-                if source_info.get("error"):
-                    print(f"    原因：{source_info['error']}")
-            elif is_fallback:
-                print(f"  源应用程序：🔄 {process_name} (推测)")
-                print(f"    检测方法：{detection_method}")
-                if source_info.get("note"):
-                    print(f"    说明：{source_info['note']}")
+                logger.warning("  源应用程序：❓ 未知 (无法获取)")
             else:
-                print(f"  源应用程序：{process_name}")
+                logger.info(f"  源应用程序：{process_name}")
 
             # 杂鱼♡～显示其他详细信息喵～
-            if source_info.get("process_path") and process_name != "Unknown":
-                print(f"  程序路径：{source_info['process_path']}")
-            if source_info.get("window_title"):
-                print(f"  窗口标题：{source_info['window_title']}")
-            if source_info.get("process_id"):
-                print(f"  进程ID：{source_info['process_id']}")
+            if source_info.process_path and process_name != "Unknown":
+                logger.debug(f"  程序路径：{source_info.process_path}")
+            if source_info.window_title:
+                logger.debug(f"  窗口标题：{source_info.window_title}")
+            if source_info.process_id:
+                logger.debug(f"  进程ID：{source_info.process_id}")
 
-        print("-" * 50)
+        logger.info("-" * 50)
 
     def get_file_info(self, file_path: str) -> dict:
         """杂鱼♡～获取文件信息喵～"""
@@ -145,7 +141,7 @@ class FileHandler(BaseClipboardHandler):
             except Exception as e:
                 # 杂鱼♡～处理失败了喵～
                 error_msg = f"杂鱼♡～文件处理失败了喵：{e}"
-                print(error_msg)
+                logger.error(error_msg)
                 self._handle_error(error_msg, [file_path])
                 return False
 
@@ -165,7 +161,7 @@ class FileHandler(BaseClipboardHandler):
         return f"{s} {size_names[i]}"
 
     def get_files_summary(
-        self, data: List[str], source_info: Optional[Dict[str, Any]] = None
+        self, data: List[str], source_info: Optional[ProcessInfo] = None
     ) -> dict:
         """杂鱼♡～获取文件列表汇总信息喵～"""
         summary = {
@@ -197,12 +193,12 @@ class FileHandler(BaseClipboardHandler):
         # 杂鱼♡～添加源应用程序信息喵～
         if source_info:
             summary["source"] = {
-                "process_name": source_info.get("process_name"),
-                "process_path": source_info.get("process_path"),
-                "window_title": source_info.get("window_title"),
-                "window_class": source_info.get("window_class"),
-                "process_id": source_info.get("process_id"),
-                "timestamp": source_info.get("timestamp"),
+                "process_name": source_info.process_name,
+                "process_path": source_info.process_path,
+                "window_title": source_info.window_title,
+                "window_class": source_info.window_class,
+                "process_id": source_info.process_id,
+                "timestamp": source_info.timestamp,
             }
 
         return summary
@@ -261,14 +257,14 @@ class SourceApplicationFileFilter:
         self.blocked_processes = [p.lower() for p in (blocked_processes or [])]
 
     def __call__(
-        self, files: List[str], source_info: Optional[Dict[str, Any]] = None
+        self, files: List[str], source_info: Optional[ProcessInfo] = None
     ) -> bool:
         """杂鱼♡～根据源应用程序过滤文件喵～"""
-        if not source_info or not source_info.get("process_name"):
+        if not source_info or not source_info.process_name:
             # 杂鱼♡～如果没有源信息，默认允许喵～
             return True
 
-        process_name = source_info["process_name"].lower()
+        process_name = source_info.process_name.lower()
 
         # 杂鱼♡～检查是否在禁止列表中喵～
         if self.blocked_processes and process_name in self.blocked_processes:

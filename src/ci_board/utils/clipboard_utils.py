@@ -5,9 +5,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .clipboard_reader import ClipboardReader
 from .message_pump import MessagePump
-from .source_tracker import SourceTracker
 from .win32_api import (ClipboardAccessDenied, ClipboardError, ClipboardFormat,
                         ClipboardTimeout, Win32API)
+from ..core.source_tracker_ import SourceTracker
 
 
 class ClipboardUtils:
@@ -76,9 +76,9 @@ class ClipboardUtils:
         source_info = None
         if with_source:
             try:
-                source_info = SourceTracker.get_source_application_info()
+                source_info = SourceTracker.get_source_info(avoid_clipboard_access=False)
             except Exception as e:
-                print(f"杂鱼♡～获取源信息时出错喵：{e}")
+                cls.logger.error(f"杂鱼♡～获取源信息时出错喵：{e}")
                 source_info = None
 
         # 杂鱼♡～然后获取剪贴板内容喵～
@@ -93,7 +93,7 @@ class ClipboardUtils:
     @classmethod
     def get_source_application_info(cls) -> Dict[str, Any]:
         """杂鱼♡～获取剪贴板内容源应用信息喵～"""
-        return SourceTracker.get_source_application_info()
+        return SourceTracker.get_source_info(avoid_clipboard_access=True)
 
     # ============= 杂鱼♡～消息泵和窗口管理喵～ =============
 
@@ -154,7 +154,7 @@ class ClipboardUtils:
                     try:
                         callback(content_type, content)
                     except Exception as e:
-                        print(f"杂鱼♡～回调函数出错喵：{e}")
+                        cls.logger.error(f"杂鱼♡～回调函数出错喵：{e}")
                 return (content_type, content)
 
             # 杂鱼♡～短暂休眠避免CPU占用过高喵～

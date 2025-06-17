@@ -7,13 +7,13 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # 杂鱼♡～设置日志级别（可以改为quiet=True来减少输出）喵～
-from ci_board.utils.logger import setup_ci_board_logging
-setup_ci_board_logging(verbose=True)  # 杂鱼♡～可以改为quiet=True或debug=True喵～
+from ci_board.utils.logger import setup_ci_board_logging, LogLevel
+setup_ci_board_logging(console_level=LogLevel.DEBUG)  # 杂鱼♡～可以改为LogLevel.INFO来减少输出喵～
 
-from ci_board import create_monitor, BMPData
+from ci_board import create_monitor, BMPData, ProcessInfo
 
 
-def on_text_change(text, source_info=None):
+def on_text_change(text, source_info: ProcessInfo):
     """杂鱼♡～文本变化回调函数（支持源信息）喵～"""
     print("杂鱼♡～检测到文本变化喵：")
     print(f"{'-'*50}")
@@ -21,19 +21,12 @@ def on_text_change(text, source_info=None):
     print(f"{'-'*50}")
 
     # 杂鱼♡～显示源应用程序信息喵～
-    if source_info:
-        print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
-        if source_info.get('process_path'):
-            print(f"  程序路径：{source_info['process_path']}")
-        if source_info.get('window_title'):
-            print(f"  窗口标题：{source_info['window_title']}")
-        if source_info.get('process_id'):
-            print(f"  进程ID：{source_info['process_id']}")
+    print(f"杂鱼♡～源应用程序信息：{source_info}")
 
     print("-" * 50)
 
 
-def on_image_change(bData: BMPData, source_info=None):
+def on_image_change(bData: BMPData, source_info: ProcessInfo):
     """杂鱼♡～图片变化回调函数（支持源信息）喵～"""
     # print("杂鱼♡～检测到图片变化喵～")
     # print(f"数据类型：{type(data)}")
@@ -42,49 +35,44 @@ def on_image_change(bData: BMPData, source_info=None):
             from PIL import Image
             import io
             image = Image.open(io.BytesIO(bData.data))
-            print(f"杂鱼♡～成功打开图片：{image.mode} {image.size}喵～")
+            print(f"杂鱼♡～成功打开图片：{image.width} {image.height}喵～")
             print(f"杂鱼♡～BMP数据大小：{len(bData.data)}字节喵～")
+            print(f"杂鱼♡～BMPData尺寸：{bData.width}x{bData.height}喵～")
             image.show()
+            print(f"杂鱼♡～源应用程序信息：{source_info}")
         except Exception as e:
             print(f"杂鱼♡～PIL打开失败喵：{e}")
     else:
-        print(f"杂鱼♡～BMP转换失败，返回原始数据{len(bData.data)}字节喵～")
+        if bData.data:
+            print(f"杂鱼♡～BMP转换失败，返回原始数据{len(bData.data)}字节喵～")
+        else:
+            print("杂鱼♡～BMP转换失败，数据为空喵～")
 
     # 杂鱼♡～显示源应用程序信息喵～
-    if source_info:
-        print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
-        if source_info.get('process_path'):
-            print(f"  程序路径：{source_info['process_path']}")
-        if source_info.get('window_title'):
-            print(f"  窗口标题：{source_info['window_title']}")
+    # if source_info:
+    #     print(f"  源应用程序：{source_info.process_name or 'Unknown'}")
+    #     if source_info.process_path:
+    #         print(f"  程序路径：{source_info.process_path}")
+    #     if source_info.window_title:
+    #         print(f"  窗口标题：{source_info.window_title}")
     print("-" * 50)
 
 
-def on_files_change(files, source_info=None):
+def on_files_change(files, source_info: ProcessInfo):
     """杂鱼♡～文件变化回调函数（支持源信息）喵～"""
     print(f"杂鱼♡～检测到文件变化喵：{files}")
 
     # 杂鱼♡～显示源应用程序信息喵～
-    if source_info:
-        print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
-        if source_info.get('process_path'):
-            print(f"  程序路径：{source_info['process_path']}")
-
-        if source_info.get('window_title'):
-            print(f"  窗口标题：{source_info['window_title']}")
+    print(f"杂鱼♡～源应用程序信息：{source_info}")
 
 
-def on_clipboard_update(data, source_info=None):
+def on_clipboard_update(data, source_info: ProcessInfo):
     """杂鱼♡～剪贴板更新回调函数（支持源信息）喵～"""
     content_type, content = data
     print(f"杂鱼♡～剪贴板内容更新了喵～类型：{content_type}")
-    print(f"杂鱼♡～剪贴板内容：{content}")
+    print(f"杂鱼♡～剪贴板内容：{str(content)[:300]}")
 
-    # 杂鱼♡～显示源应用程序信息喵～
-    if source_info:
-        print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
-        if source_info.get('process_path'):
-            print(f"  程序路径：{source_info['process_path']}")
+    print(f"杂鱼♡～源应用程序信息：{source_info}")
 
 
 if __name__ == "__main__":

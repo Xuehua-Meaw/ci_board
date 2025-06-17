@@ -4,7 +4,11 @@ import ctypes.wintypes as w
 import time
 from typing import Callable, Dict, Optional
 
+from .logger import get_component_logger
 from .win32_api import Win32API, Win32Structures
+
+# 杂鱼♡～获取组件专用logger喵～
+logger = get_component_logger('utils.message_pump')
 
 
 class MessagePump:
@@ -35,7 +39,7 @@ class MessagePump:
             )
 
             if hwnd:
-                print(f"杂鱼♡～创建message-only窗口成功，句柄：{hwnd}")
+                logger.debug(f"杂鱼♡～创建message-only窗口成功，句柄：{hwnd}")
 
                 # 杂鱼♡～设置窗口过程函数喵～
                 GWLP_WNDPROC = -4
@@ -59,7 +63,7 @@ class MessagePump:
 
             return hwnd if hwnd else None
         except Exception as e:
-            print(f"杂鱼♡～创建隐藏窗口失败喵：{e}")
+            logger.error(f"杂鱼♡～创建隐藏窗口失败喵：{e}")
             return None
 
     @classmethod
@@ -77,10 +81,10 @@ class MessagePump:
 
             result = bool(Win32API.user32.DestroyWindow(hwnd))
             if result:
-                print(f"杂鱼♡～成功销毁窗口喵～(窗口句柄: {hwnd})")
+                logger.debug(f"杂鱼♡～成功销毁窗口喵～(窗口句柄: {hwnd})")
             return result
         except Exception as e:
-            print(f"杂鱼♡～销毁窗口失败喵：{e}")
+            logger.error(f"杂鱼♡～销毁窗口失败喵：{e}")
             return False
 
     @classmethod
@@ -97,10 +101,10 @@ class MessagePump:
 
             result = bool(Win32API.user32.AddClipboardFormatListener(hwnd))
             if result:
-                print(f"杂鱼♡～成功添加剪贴板监听器喵～(窗口句柄: {hwnd})")
+                logger.debug(f"杂鱼♡～成功添加剪贴板监听器喵～(窗口句柄: {hwnd})")
             return result
         except Exception as e:
-            print(f"杂鱼♡～添加剪贴板监听器失败喵：{e}")
+            logger.error(f"杂鱼♡～添加剪贴板监听器失败喵：{e}")
             return False
 
     @classmethod
@@ -109,7 +113,7 @@ class MessagePump:
         try:
             return bool(Win32API.user32.RemoveClipboardFormatListener(hwnd))
         except Exception as e:
-            print(f"杂鱼♡～移除剪贴板监听器失败喵：{e}")
+            logger.error(f"杂鱼♡～移除剪贴板监听器失败喵：{e}")
             return False
 
     @classmethod
@@ -123,7 +127,7 @@ class MessagePump:
                 try:
                     cls._window_callbacks[hwnd](msg, wParam, lParam)
                 except Exception as e:
-                    print(f"杂鱼♡～窗口回调函数执行失败喵：{e}")
+                    logger.error(f"杂鱼♡～窗口回调函数执行失败喵：{e}")
 
             # 杂鱼♡～不在窗口过程中重复打印消息，避免双重处理喵～
             # 杂鱼♡～让回调函数负责具体的消息处理逻辑喵～
@@ -131,7 +135,7 @@ class MessagePump:
             # 杂鱼♡～调用默认窗口过程喵～
             return Win32API.user32.DefWindowProcW(hwnd, msg, wParam, lParam)
         except Exception as e:
-            print(f"杂鱼♡～窗口过程函数异常喵：{e}")
+            logger.error(f"杂鱼♡～窗口过程函数异常喵：{e}")
             return Win32API.user32.DefWindowProcW(hwnd, msg, wParam, lParam)
 
     @classmethod
@@ -177,7 +181,7 @@ class MessagePump:
 
                 if result == -1:  # 杂鱼♡～错误喵～
                     error_code = Win32API.kernel32.GetLastError()
-                    print(f"杂鱼♡～GetMessage失败，错误码：{error_code}")
+                    logger.error(f"杂鱼♡～GetMessage失败，错误码：{error_code}")
                     return False
                 elif result == 0:  # 杂鱼♡～WM_QUIT消息喵～
                     return False
@@ -187,7 +191,7 @@ class MessagePump:
                     Win32API.user32.DispatchMessageW(ctypes.byref(msg))
                     return True
         except Exception as e:
-            print(f"杂鱼♡～消息泵处理异常喵：{e}")
+            logger.error(f"杂鱼♡～消息泵处理异常喵：{e}")
             return False
 
     @classmethod
@@ -204,7 +208,7 @@ class MessagePump:
                 message: w.UINT, wParam: w.WPARAM, lParam: w.LPARAM
             ) -> None:
                 if message == Win32API.WM_CLIPBOARDUPDATE:
-                    print("杂鱼♡～收到剪贴板更新消息喵～")
+                    logger.debug("杂鱼♡～收到剪贴板更新消息喵～")
                     # 杂鱼♡～这里可以处理剪贴板更新逻辑喵～
 
             # 杂鱼♡～临时设置回调喵～
@@ -237,7 +241,7 @@ class MessagePump:
         try:
             Win32API.user32.PostQuitMessage(exit_code)
         except Exception as e:
-            print(f"杂鱼♡～发送退出消息失败喵：{e}")
+            logger.error(f"杂鱼♡～发送退出消息失败喵：{e}")
 
     @classmethod
     def set_window_callback(

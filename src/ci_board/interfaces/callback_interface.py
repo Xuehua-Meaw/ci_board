@@ -1,13 +1,14 @@
 # 杂鱼♡～本喵设计的回调接口定义喵～
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Optional
+from ..types.t_source import ProcessInfo
 
 
 class CallbackInterface(ABC):
     """杂鱼♡～抽象的回调接口，所有处理器都要继承这个喵～"""
 
     @abstractmethod
-    def handle(self, data: Any, source_info: Optional[Dict[str, Any]] = None) -> None:
+    def handle(self, data: Any, source_info: Optional[ProcessInfo] = None) -> None:
         """
         杂鱼♡～处理剪贴板数据的抽象方法喵～
 
@@ -84,7 +85,7 @@ class BaseClipboardHandler(CallbackInterface):
                 return False
         return True
 
-    def handle(self, data: Any, source_info: Optional[Dict[str, Any]] = None) -> None:
+    def handle(self, data: Any, source_info: Optional[ProcessInfo] = None) -> None:
         """杂鱼♡～处理数据的通用方法喵～"""
         if not self._enabled:
             return
@@ -101,11 +102,13 @@ class BaseClipboardHandler(CallbackInterface):
             self._default_handle(data, source_info)
 
     def _default_handle(
-        self, data: Any, source_info: Optional[Dict[str, Any]] = None
+        self, data: Any, source_info: Optional[ProcessInfo] = None
     ) -> None:
         """杂鱼♡～默认处理方法，子类可以重写喵～"""
+        # 杂鱼♡～这里需要添加logger，但BaseClipboardHandler没有定义logger喵～
+        # 杂鱼♡～子类应该重写这个方法并使用自己的logger喵～
         print(f"杂鱼♡～处理数据：{data}")
         if source_info and self._include_source_info:
             print(
-                f"杂鱼♡～源应用程序：{source_info.get('process_name', 'Unknown')} ({source_info.get('process_path', 'Unknown path')})"
+                f"杂鱼♡～源应用程序：{source_info.process_name} ({source_info.process_path})"
             )

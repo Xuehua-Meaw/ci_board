@@ -1,24 +1,13 @@
 # 杂鱼♡～本喵的图片处理器喵～
-import ctypes
-import ctypes.wintypes as w
 import datetime
 from typing import Any, Callable, Dict, Optional, Union
+from ..types import ProcessInfo, BMPData
 
 from ..interfaces.callback_interface import BaseClipboardHandler
-from ..types.t_image import BMPData
+from ..utils.logger import get_component_logger
 
-
-class BITMAP(ctypes.Structure):
-    _fields_ = [
-        ("bmType", w.LONG),
-        ("bmWidth", w.LONG),
-        ("bmHeight", w.LONG),
-        ("bmWidthBytes", w.LONG),
-        ("bmPlanes", w.WORD),
-        ("bmBitsPixel", w.WORD),
-        ("bmBits", ctypes.POINTER(ctypes.c_void_p)),
-    ]
-
+# 杂鱼♡～获取组件专用logger喵～
+logger = get_component_logger('handlers.image_handler')
 
 # 杂鱼♡～Windows GDI常量喵～
 DIB_RGB_COLORS = 0
@@ -41,12 +30,13 @@ class ImageHandler(BaseClipboardHandler):
         self._cached_dib_data = None  # 杂鱼♡～缓存DIB数据喵～
         self._cached_sequence = None  # 杂鱼♡～缓存序列号喵～
 
-    def handle(self, data: Any, source_info: Optional[Dict[str, Any]] = None) -> None:
+    def handle(self, data: Any, source_info: Optional[ProcessInfo] = None) -> None:
         """杂鱼♡～重写handle方法，转换为BMP格式数据喵～"""
         bData = BMPData(
             success=False,
             data=None,
-            size=(0, 0),
+            width=0,
+            height=0,
             bit_count=0,
             timestamp=str(datetime.datetime.now()),
         )
@@ -76,17 +66,17 @@ class ImageHandler(BaseClipboardHandler):
                 return
 
         except Exception as e:
-            print(f"杂鱼♡～BMP转换过程出错喵：{e}")
+            logger.error(f"杂鱼♡～BMP转换过程出错喵：{e}")
             return
 
         if self._callback:
             try:
                 # 杂鱼♡～检查回调函数是否支持源信息参数喵～
                 self._callback(
-                    processed_data, source_info if self._include_source_info else None
+                    processed_data, source_info
                 )
             except Exception as e:
-                print(f"杂鱼♡～图片处理回调函数出错喵：{e}")
+                logger.error(f"杂鱼♡～图片处理回调函数出错喵：{e}")
         else:
             self._default_handle(processed_data, source_info)
 
@@ -100,12 +90,13 @@ class ImageHandler(BaseClipboardHandler):
             # 杂鱼♡～返回BMP格式的数据结构喵～
             bData.success = True
             bData.data = bmp_bytes
-            bData.size = (int.from_bytes(bmp_bytes[4:8], "little", signed=True), int.from_bytes(bmp_bytes[8:12], "little", signed=True))
-            bData.bit_count = int.from_bytes(bmp_bytes[14:16], "little")
+            bData.width = int.from_bytes(bmp_bytes[18:22], "little", signed=True)
+            bData.height = int.from_bytes(bmp_bytes[22:26], "little", signed=True)
+            bData.bit_count = int.from_bytes(bmp_bytes[28:30], "little")
             return bData
         else:
             # 杂鱼♡～BMP转换失败，返回原始数据喵～
-            print("杂鱼♡～BMP转换失败，返回原始数据喵～")
+            logger.warning("杂鱼♡～BMP转换失败，返回原始数据喵～")
             return bData
 
     def is_valid(self, data: Any) -> bool:
@@ -127,37 +118,31 @@ class ImageHandler(BaseClipboardHandler):
         return False
 
     def _default_handle(
-        self, bData: BMPData, source_info: Optional[Dict[str, Any]] = None
+        self, bData: BMPData, source_info: Optional[ProcessInfo] = None
     ) -> None:
         """杂鱼♡～默认的图片处理方法喵～"""
-        if not self.is_valid(bData.data):
-            print("杂鱼♡～无效的图片数据喵～")
-            return
-
-        print("杂鱼♡～检测到图片变化喵～")
+        logger.info("杂鱼♡～检测到图片变化喵～")
 
         # 杂鱼♡～显示BMP格式图片信息喵～
         if bData.success:
-            print(f"杂鱼♡～BMP格式图片：{bData.size[0]}x{bData.size[1]}喵～")
-            print(f"杂鱼♡～BMP文件大小：{len(bData.data)}字节喵～")
+            logger.info(f"杂鱼♡～BMP格式图片：{bData.width}x{bData.height}喵～")
+            logger.info(f"杂鱼♡～BMP文件大小：{len(bData.data)}字节喵～")
         else:
-            print("杂鱼♡～BMP转换失败，返回原始数据喵～")
+            logger.warning("杂鱼♡～BMP转换失败，返回原始数据喵～")
             return
 
         # 杂鱼♡～显示源应用程序信息喵～
         if source_info and self._include_source_info:
-            print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
-            if source_info.get("process_path"):
-                print(f"  程序路径：{source_info['process_path']}")
-            if source_info.get("window_title"):
-                print(f"  窗口标题：{source_info['window_title']}")
-            if source_info.get("error"):
-                print(f"  错误信息：{source_info['error']}")
+            logger.info(f"  源应用程序：{source_info.process_name}")
+            if source_info.process_path:
+                logger.debug(f"  程序路径：{source_info.process_path}")
+            if source_info.window_title:
+                logger.debug(f"  窗口标题：{source_info.window_title}")
 
-        print("-" * 50)
+        logger.info("-" * 50)
 
     def get_image_info(
-        self, data: Any, source_info: Optional[Dict[str, Any]] = None
+        self, data: Any, source_info: Optional[ProcessInfo] = None
     ) -> Dict[str, Union[str, int, bool, None]]:
         """杂鱼♡～获取图片信息喵～"""
         default_info = {
@@ -196,12 +181,12 @@ class ImageHandler(BaseClipboardHandler):
         # 杂鱼♡～添加源应用程序信息喵～
         if source_info:
             info["source"] = {
-                "process_name": source_info.get("process_name"),
-                "process_path": source_info.get("process_path"),
-                "window_title": source_info.get("window_title"),
-                "window_class": source_info.get("window_class"),
-                "process_id": source_info.get("process_id"),
-                "timestamp": source_info.get("timestamp"),
+                "process_name": source_info.process_name,
+                "process_path": source_info.process_path,
+                "window_title": source_info.window_title,
+                "window_class": source_info.window_class,
+                "process_id": source_info.process_id,
+                "timestamp": source_info.timestamp,
             }
 
         return info
@@ -287,12 +272,12 @@ class ImageHandler(BaseClipboardHandler):
             # 杂鱼♡～重构后的数据结构使用'data'字段而不是'data_pointer'喵～
             dib_bytes = fresh_data.get("data")
             if not dib_bytes:
-                print("杂鱼♡～没有找到DIB数据字节喵～")
+                logger.warning("杂鱼♡～没有找到DIB数据字节喵～")
                 return None
 
             # 杂鱼♡～检查DIB数据大小喵～
             if len(dib_bytes) < 40:
-                print("杂鱼♡～DIB数据太小，无法解析头部喵～")
+                logger.warning("杂鱼♡～DIB数据太小，无法解析头部喵～")
                 return None
 
             # 杂鱼♡～读取BITMAPINFOHEADER信息喵～
@@ -338,13 +323,13 @@ class ImageHandler(BaseClipboardHandler):
             bmp_bytes.extend(pixel_offset.to_bytes(4, "little"))  # 像素数据偏移
             bmp_bytes.extend(dib_bytes)  # DIB数据
 
-            print(
+            logger.info(
                 f"杂鱼♡～BMP转换成功：{width}x{abs(height)}，{bit_count}位，文件大小{len(bmp_bytes)}字节喵～"
             )
             return bytes(bmp_bytes)
 
         except Exception as e:
-            print(f"杂鱼♡～获取BMP字节数据失败喵：{e}")
+            logger.error(f"杂鱼♡～获取BMP字节数据失败喵：{e}")
             import traceback
 
             traceback.print_exc()
@@ -473,13 +458,13 @@ class SourceApplicationImageFilter:
         self.allowed_processes = [p.lower() for p in (allowed_processes or [])]
         self.blocked_processes = [p.lower() for p in (blocked_processes or [])]
 
-    def __call__(self, data: Any, source_info: Optional[Dict[str, Any]] = None) -> bool:
+    def __call__(self, data: Any, source_info: Optional[ProcessInfo] = None) -> bool:
         """杂鱼♡～根据源应用程序过滤图片喵～"""
-        if not source_info or not source_info.get("process_name"):
+        if not source_info or not source_info.process_name:
             # 杂鱼♡～如果没有源信息，默认允许喵～
             return True
 
-        process_name = source_info["process_name"].lower()
+        process_name = source_info.process_name.lower()
 
         # 杂鱼♡～检查是否在禁止列表中喵～
         if self.blocked_processes and process_name in self.blocked_processes:

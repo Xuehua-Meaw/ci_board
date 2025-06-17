@@ -269,10 +269,10 @@ def get_smart_source_analysis():
             real_source, confidence = current_focus, "中 (拥有者是系统进程)"
 
     if not real_source and isinstance(owner_info, dict):
-        real_source, confidence = owner_info, "低 (仅基于拥有者)"
+        real_source, confidence = owner_info, "low (仅基于拥有者)"
 
     if not real_source and recent_focus:
-        real_source, confidence = recent_focus[0], "低 (基于最近焦点历史)"
+        real_source, confidence = recent_focus[0], "low (基于最近焦点历史)"
 
     if real_source:
         return (f"杂鱼♡～智能源分析结果 (置信度: {confidence}) 喵～\n"

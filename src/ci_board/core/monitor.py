@@ -8,10 +8,10 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 from ..interfaces.callback_interface import BaseClipboardHandler
+from ..types.t_source import ProcessInfo
 from ..utils.clipboard_utils import ClipboardUtils
-from ..utils.source_tracker import SourceTracker
 from ..utils.logger import get_component_logger
-from .source_tracker_ import OptimizedSourceTracker
+from .source_tracker_ import SourceTracker
 
 
 class ClipboardMonitor:
@@ -53,7 +53,6 @@ class ClipboardMonitor:
         self._content_cache = {}  # 杂鱼♡～内容缓存，用于去重喵～
         self._cache_max_size = 10  # 杂鱼♡～最大缓存数量喵～
         self._enable_source_tracking = True  # 杂鱼♡～启用源应用程序追踪喵～
-        self._use_optimized_tracker = True  # 杂鱼♡～使用优化的源追踪器，避免消息循环冲突喵～
 
         # 杂鱼♡～事件驱动相关配置喵～
         self._event_driven = event_driven
@@ -99,7 +98,7 @@ class ClipboardMonitor:
     def _restart_async_executor(self) -> None:
         """杂鱼♡～重启异步执行器喵～"""
         if self._executor:
-            print("杂鱼♡～重新启动异步执行器喵～")
+            self.logger.info("杂鱼♡～重新启动异步执行器喵～")
             self._shutdown_async_executor()
             self._init_async_executor()
 
@@ -108,7 +107,7 @@ class ClipboardMonitor:
         if not self._async_processing:
             return
 
-        print(
+        self.logger.info(
             f"杂鱼♡～初始化异步执行器，最大工作线程：{self._max_workers}，超时：{self._handler_timeout}s喵～"
         )
         self._executor = ThreadPoolExecutor(
@@ -125,7 +124,7 @@ class ClipboardMonitor:
         if not self._executor:
             return
 
-        print("杂鱼♡～正在关闭异步执行器喵～")
+        self.logger.info("杂鱼♡～正在关闭异步执行器喵～")
         self._executor_stop_event.set()
 
         # 杂鱼♡～等待执行器线程结束喵～
@@ -143,74 +142,115 @@ class ClipboardMonitor:
 
         while not self._executor_stop_event.is_set():
             try:
-                # 杂鱼♡～从任务队列获取新任务喵～
-                try:
-                    task = self._task_queue.get(timeout=0.1)
-                    if task is None:  # 杂鱼♡～关闭信号喵～
-                        break
+                # 杂鱼♡～处理新任务喵～
+                self._process_new_tasks(futures)
 
-                    handler, content, source_info, content_type = task
-                    future = self._executor.submit(
-                        self._execute_handler_safely,
-                        handler,
-                        content,
-                        source_info,
-                        content_type,
-                    )
-                    futures[future] = (handler, content_type, time.time())
-                    self._async_stats["tasks_submitted"] += 1
-                    self._async_stats["active_tasks"] += 1
-
-                except queue.Empty:
-                    pass
-
-                # 杂鱼♡～检查已完成的任务喵～
-                completed_futures = []
-                for future in list(futures.keys()):
-                    if future.done():
-                        completed_futures.append(future)
-                    else:
-                        # 杂鱼♡～检查超时喵～
-                        handler, content_type, start_time = futures[future]
-                        if time.time() - start_time > self._handler_timeout:
-                            print(
-                                f"杂鱼♡～处理器超时了喵：{type(handler).__name__} ({content_type})"
-                            )
-                            future.cancel()
-                            completed_futures.append(future)
-                            self._async_stats["tasks_timeout"] += 1
-
-                # 杂鱼♡～处理已完成的任务喵～
-                for future in completed_futures:
-                    try:
-                        if not future.cancelled():
-                            result = future.result()
-                            if result:
-                                self._async_stats["tasks_completed"] += 1
-                            else:
-                                self._async_stats["tasks_failed"] += 1
-                    except Exception as e:
-                        handler, content_type, _ = futures[future]
-                        print(
-                            f"杂鱼♡～异步处理器出错了喵：{type(handler).__name__} ({content_type}) - {e}"
-                        )
-                        self._async_stats["tasks_failed"] += 1
-                    finally:
-                        del futures[future]
-                        self._async_stats["active_tasks"] -= 1
-                        self._task_queue.task_done()
+                # 杂鱼♡～检查并清理已完成的任务喵～
+                self._check_and_cleanup_completed_tasks(futures)
 
                 # 杂鱼♡～适当休息喵～
                 time.sleep(0.01)
 
             except Exception as e:
-                print(f"杂鱼♡～异步执行器循环出错了喵：{e}")
+                self.logger.error(f"杂鱼♡～异步执行器循环出错了喵：{e}")
                 time.sleep(0.1)
 
         # 杂鱼♡～清理剩余任务喵～
-        print("杂鱼♡～异步执行器循环结束，清理剩余任务喵～")
+        self._cleanup_remaining_futures(futures)
+
+    def _process_new_tasks(self, futures: dict) -> None:
+        """杂鱼♡～处理新任务喵～"""
+        try:
+            task = self._task_queue.get(timeout=0.1)
+            if task is None:  # 杂鱼♡～关闭信号喵～
+                return
+
+            handler, content, source_info, content_type = task
+            future = self._executor.submit(
+                self._execute_handler_safely,
+                handler,
+                content,
+                source_info,
+                content_type,
+            )
+            futures[future] = (handler, content_type, time.time())
+            self._async_stats["tasks_submitted"] += 1
+            self._async_stats["active_tasks"] += 1
+
+        except queue.Empty:
+            pass
+
+    def _check_and_cleanup_completed_tasks(self, futures: dict) -> None:
+        """杂鱼♡～检查并清理已完成的任务喵～"""
+        completed_futures = self._find_completed_and_timeout_futures(futures)
+
+        for future in completed_futures:
+            self._handle_completed_future(future, futures)
+
+    def _find_completed_and_timeout_futures(self, futures: dict) -> list:
+        """杂鱼♡～查找已完成和超时的任务喵～"""
+        completed_futures = []
+
+        for future in list(futures.keys()):
+            if future.done():
+                completed_futures.append(future)
+            else:
+                # 杂鱼♡～检查超时喵～
+                handler, content_type, start_time = futures[future]
+                if time.time() - start_time > self._handler_timeout:
+                    self.logger.warning(f"杂鱼♡～处理器超时了喵：{type(handler).__name__} ({content_type})")
+                    future.cancel()
+                    completed_futures.append(future)
+                    self._async_stats["tasks_timeout"] += 1
+
+        return completed_futures
+
+    def _handle_completed_future(self, future, futures: dict) -> None:
+        """杂鱼♡～处理单个已完成的任务喵～"""
+        try:
+            if not future.cancelled():
+                result = future.result()
+                if result:
+                    self._async_stats["tasks_completed"] += 1
+                else:
+                    self._async_stats["tasks_failed"] += 1
+        except Exception as e:
+            handler, content_type, _ = futures[future]
+            self.logger.error(f"杂鱼♡～异步处理器出错了喵：{type(handler).__name__} ({content_type}) - {e}")
+            self._async_stats["tasks_failed"] += 1
+        finally:
+            del futures[future]
+            self._async_stats["active_tasks"] -= 1
+            self._task_queue.task_done()
+
+    def _cleanup_remaining_futures(self, futures: dict) -> None:
+        """杂鱼♡～清理剩余任务喵～"""
+        self.logger.info("杂鱼♡～异步执行器循环结束，清理剩余任务喵～")
         for future in futures.keys():
             future.cancel()
+
+    def _convert_source_info_to_process_info(self, source_info: Optional[Dict[str, Any]]) -> Optional[ProcessInfo]:
+        """杂鱼♡～将dict格式的source_info转换为ProcessInfo实例喵～"""
+        if not source_info or not isinstance(source_info, dict):
+            return None
+
+        try:
+            # 杂鱼♡～创建ProcessInfo实例，提供所有必需字段的默认值喵～
+            return ProcessInfo(
+                process_name=source_info.get('process_name', 'Unknown'),
+                process_path=source_info.get('process_path', ''),
+                process_id=source_info.get('process_id', 0),
+                window_title=source_info.get('window_title', ''),
+                window_class=source_info.get('window_class', ''),
+                detection_method=source_info.get('detection_method', 'unknown'),
+                confidence_level=source_info.get('confidence_level', 'unknown'),
+                is_system_process=source_info.get('is_system_process', False),
+                is_screenshot_tool=source_info.get('is_screenshot_tool', False),
+                timestamp=source_info.get('timestamp', time.time())
+            )
+        except Exception as e:
+            self.logger.error(f"杂鱼♡～转换source_info为ProcessInfo失败喵：{e}")
+            return None
 
     def _execute_handler_safely(
         self,
@@ -222,7 +262,9 @@ class ClipboardMonitor:
         """杂鱼♡～安全执行处理器喵～"""
         try:
             if self._enable_source_tracking:
-                handler.handle(content, source_info)
+                # 杂鱼♡～将dict格式的source_info转换为ProcessInfo实例喵～
+                process_info = self._convert_source_info_to_process_info(source_info)
+                handler.handle(content, process_info)
             else:
                 # 杂鱼♡～检查处理器是否支持源信息参数，向后兼容喵～
                 import inspect
@@ -237,7 +279,7 @@ class ClipboardMonitor:
                     handler.handle(content)
             return True
         except Exception as e:
-            print(
+            self.logger.error(
                 f"杂鱼♡～{content_type}处理器出错了喵：{type(handler).__name__} - {e}"
             )
             return False
@@ -265,18 +307,18 @@ class ClipboardMonitor:
         """杂鱼♡～启用事件驱动监控模式（推荐）喵～"""
         self._event_driven = True
         self._monitoring_mode = "event"
-        print("杂鱼♡～已切换到事件驱动模式，更高效喵～")
+        self.logger.info("杂鱼♡～已切换到事件驱动模式，更高效喵～")
 
     def disable_event_driven_mode(self) -> None:
         """杂鱼♡～禁用事件驱动模式，回到轮询模式喵～"""
         self._event_driven = False
         self._monitoring_mode = "polling"
-        print("杂鱼♡～已切换到轮询模式，杂鱼主人确定要这样做吗？喵～")
+        self.logger.info("杂鱼♡～已切换到轮询模式，杂鱼主人确定要这样做吗？喵～")
 
     def add_handler(
         self,
         content_type: Literal["text", "image", "files", "update"],
-        handler: Union[BaseClipboardHandler, Callable],
+        handler: Optional[Union[BaseClipboardHandler, Callable]] = None,
     ) -> BaseClipboardHandler:
         """
         杂鱼♡～添加处理器喵～
@@ -295,11 +337,14 @@ class ClipboardMonitor:
         if callable(handler) and not isinstance(handler, BaseClipboardHandler):
             handler = self._create_handler_from_callback(content_type, handler)
 
+        if handler is None:
+            handler = self._create_handler_from_callback(content_type, None)
+
         self._handlers[content_type].append(handler)
         return handler
 
     def _create_handler_from_callback(
-        self, content_type: str, callback: Callable
+        self, content_type: str, callback: Optional[Callable] = None
     ) -> BaseClipboardHandler:
         """杂鱼♡～根据回调函数创建对应的处理器喵～"""
         # 杂鱼♡～延迟导入避免循环引用喵～
@@ -352,7 +397,7 @@ class ClipboardMonitor:
                 # 杂鱼♡～其他类型转字符串哈希喵～
                 return hashlib.md5(str(content).encode("utf-8")).hexdigest()
         except Exception as e:
-            print(f"杂鱼♡～计算内容哈希失败喵：{e}")
+            self.logger.error(f"杂鱼♡～计算内容哈希失败喵：{e}")
             # 杂鱼♡～如果哈希计算失败，返回时间戳确保不会误判重复喵～
             return hashlib.md5(str(time.time()).encode("utf-8")).hexdigest()
 
@@ -511,13 +556,7 @@ class ClipboardMonitor:
 
         # 杂鱼♡～初始化智能源追踪器喵～
         if self._enable_source_tracking:
-            if self._use_optimized_tracker:
-                self.logger.info("正在初始化集成式智能源追踪功能")
-                # 杂鱼♡～优化版本不需要单独的消息循环，将在主监控线程中处理喵～
-            else:
-                self.logger.info("正在初始化传统智能源追踪功能")
-                if not SourceTracker.initialize_focus_tracking():
-                    self.logger.warning("智能源追踪初始化失败，将使用基础源追踪")
+            self.logger.info("正在初始化集成式智能源追踪功能")
 
         # 杂鱼♡～初始化异步执行器喵～
         self._init_async_executor()
@@ -540,7 +579,7 @@ class ClipboardMonitor:
             return False
 
         self._is_running = True
-        self.logger.success(
+        self.logger.info(
             f"剪贴板监控已启动 (异步模式：{self._async_processing}, 监控模式：{self._monitoring_mode})"
         )
         return True
@@ -563,7 +602,7 @@ class ClipboardMonitor:
                     self._hwnd, 0x0012, 0, 0
                 )  # WM_QUIT = 0x0012
             except Exception as e:
-                print(f"杂鱼♡～发送退出消息失败喵：{e}")
+                self.logger.error(f"杂鱼♡～发送退出消息失败喵：{e}")
 
         # 杂鱼♡～关闭异步执行器喵～
         self._shutdown_async_executor()
@@ -572,16 +611,12 @@ class ClipboardMonitor:
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=3.0)  # 杂鱼♡～增加超时时间喵～
             if self._thread.is_alive():
-                print("杂鱼♡～线程在3秒内未能正常退出喵～")
+                self.logger.warning("杂鱼♡～线程在3秒内未能正常退出喵～")
 
         # 杂鱼♡～清理智能源追踪器喵～
         if self._enable_source_tracking:
-            if self._use_optimized_tracker:
-                print("杂鱼♡～正在清理集成式智能源追踪功能喵～")
-                OptimizedSourceTracker.cleanup_integrated_tracking()
-            else:
-                print("杂鱼♡～正在清理传统智能源追踪功能喵～")
-                SourceTracker.cleanup_focus_tracking()
+            self.logger.info("杂鱼♡～正在清理集成式智能源追踪功能喵～")
+            SourceTracker.cleanup_focus_tracking()
 
         # 杂鱼♡～清理窗口资源喵～
         if self._hwnd:
@@ -590,7 +625,7 @@ class ClipboardMonitor:
             self._hwnd = None
 
         self._is_running = False
-        print("杂鱼♡～剪贴板监控已停止喵～")
+        self.logger.info("杂鱼♡～剪贴板监控已停止喵～")
 
     def wait(self) -> None:
         """杂鱼♡～等待监控器结束喵～"""
@@ -604,7 +639,7 @@ class ClipboardMonitor:
                 else:
                     break
         except KeyboardInterrupt:
-            print("杂鱼♡～被用户中断了喵～")
+            self.logger.info("杂鱼♡～被用户中断了喵～")
             self.stop()
             raise
 
@@ -612,10 +647,10 @@ class ClipboardMonitor:
         """杂鱼♡～监控循环喵～"""
         try:
             # 杂鱼♡～在消息循环线程中创建窗口和设置监听器喵～
-            print("杂鱼♡～在监控线程中创建窗口喵～")
+            self.logger.info("杂鱼♡～在监控线程中创建窗口喵～")
             self._hwnd = ClipboardUtils.create_hidden_window("NekoClipboardMonitor")
             if not self._hwnd:
-                print("杂鱼♡～创建监控窗口失败了喵！")
+                self.logger.error("杂鱼♡～创建监控窗口失败了喵！")
                 self._window_creation_success.set()
                 return
 
@@ -631,21 +666,21 @@ class ClipboardMonitor:
             if not ClipboardUtils.add_clipboard_listener(
                 self._hwnd, clipboard_callback
             ):
-                print("杂鱼♡～添加剪贴板监听器失败了喵！")
+                self.logger.error("杂鱼♡～添加剪贴板监听器失败了喵！")
                 ClipboardUtils.destroy_window(self._hwnd)
                 self._hwnd = None
                 self._window_creation_success.set()
                 return
 
             # 杂鱼♡～设置集成式焦点跟踪喵～
-            if self._enable_source_tracking and self._use_optimized_tracker:
-                if not OptimizedSourceTracker.initialize_integrated_tracking(None):
-                    print("杂鱼♡～警告：集成式焦点跟踪初始化失败喵～")
+            if self._enable_source_tracking:
+                if not SourceTracker.initialize_integrated_tracking(None):
+                    self.logger.warning("杂鱼♡～警告：集成式焦点跟踪初始化失败喵～")
 
             # 杂鱼♡～通知主线程窗口创建成功喵～
             self._window_creation_success.set()
 
-            print(f"杂鱼♡～开始监控剪贴板变化喵～(模式：{self._monitoring_mode})")
+            self.logger.info(f"杂鱼♡～开始监控剪贴板变化喵～(模式：{self._monitoring_mode})")
 
             if self._event_driven:
                 self._event_driven_monitor_loop()
@@ -653,10 +688,10 @@ class ClipboardMonitor:
                 self._polling_monitor_loop()
 
         except Exception as e:
-            print(f"杂鱼♡～监控循环初始化出错喵：{e}")
+            self.logger.error(f"杂鱼♡～监控循环初始化出错喵：{e}")
             self._window_creation_success.set()
         finally:
-            print("杂鱼♡～停止监控剪贴板变化喵～")
+            self.logger.info("杂鱼♡～停止监控剪贴板变化喵～")
 
     def _on_clipboard_update(self) -> None:
         """杂鱼♡～处理剪贴板更新事件喵～"""
@@ -675,17 +710,9 @@ class ClipboardMonitor:
 
             # 杂鱼♡～获取新内容和源信息喵～
             if self._enable_source_tracking:
-                if self._use_optimized_tracker:
-                    # 杂鱼♡～使用优化的源追踪器，避免剪贴板访问竞争喵～
-                    content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
-                    current_content = (content_type, content)
-                    # 杂鱼♡～安全获取源信息，避免剪贴板访问冲突喵～
-                    source_info = OptimizedSourceTracker.get_optimized_source_info(avoid_clipboard_access=True)
-                else:
-                    content_type, content, source_info = (
-                        ClipboardUtils.get_clipboard_content(with_source=True)
-                    )
-                    current_content = (content_type, content)
+                # 杂鱼♡～使用统一的源追踪器，避免剪贴板访问竞争喵～
+                content_type, content, source_info = ClipboardUtils.get_clipboard_content(with_source=True)
+                current_content = (content_type, content)
             else:
                 content_type, content, source_info = (
                     ClipboardUtils.get_clipboard_content(with_source=False)
@@ -701,12 +728,12 @@ class ClipboardMonitor:
                     self._last_sequence_number = current_seq
 
         except Exception as e:
-            print(f"杂鱼♡～处理剪贴板更新时出错喵：{e}")
+            self.logger.error(f"杂鱼♡～处理剪贴板更新时出错喵：{e}")
 
     def _event_driven_monitor_loop(self) -> None:
         """杂鱼♡～事件驱动监控循环（推荐）喵～"""
-        print("杂鱼♡～使用事件驱动模式，等待剪贴板更新消息喵～")
-        print("杂鱼♡～现在使用混合模式：阻塞等待消息但定期检查停止事件喵～")
+        self.logger.info("杂鱼♡～使用事件驱动模式，等待剪贴板更新消息喵～")
+        self.logger.info("杂鱼♡～现在使用混合模式：阻塞等待消息但定期检查停止事件喵～")
 
         # 杂鱼♡～混合事件驱动循环：使用短超时的阻塞消息等待+定期检查停止事件喵～
         while not self._stop_event.is_set():
@@ -720,12 +747,12 @@ class ClipboardMonitor:
                     time.sleep(0.01)  # 杂鱼♡～10毫秒喵～
 
             except Exception as e:
-                print(f"杂鱼♡～事件驱动循环出错了喵：{e}")
+                self.logger.error(f"杂鱼♡～事件驱动循环出错了喵：{e}")
                 time.sleep(0.1)
 
     def _polling_monitor_loop(self) -> None:
         """杂鱼♡～轮询监控循环（兼容模式）喵～"""
-        print("杂鱼♡～使用轮询模式，定期检查剪贴板变化喵～")
+        self.logger.info("杂鱼♡～使用轮询模式，定期检查剪贴板变化喵～")
 
         # 杂鱼♡～获取初始序列号喵～
         current_seq = ClipboardUtils.get_clipboard_sequence_number()
@@ -739,18 +766,11 @@ class ClipboardMonitor:
                 if current_seq != self._last_sequence_number:
                     # 杂鱼♡～序列号变化了，获取新内容和源信息喵～
                     if self._enable_source_tracking:
-                        if self._use_optimized_tracker:
-                            # 杂鱼♡～使用优化的源追踪器，避免剪贴板访问竞争喵～
-                            content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
-                            current_content = (content_type, content)
-                            # 杂鱼♡～安全获取源信息，避免剪贴板访问冲突喵～
-                            source_info = OptimizedSourceTracker.get_optimized_source_info(avoid_clipboard_access=True)
-                        else:
-                            # 杂鱼♡～使用传统版本获取内容和源信息喵～
-                            content_type, content, source_info = (
-                                ClipboardUtils.get_clipboard_content(with_source=True)
-                            )
-                            current_content = (content_type, content)
+                        # 杂鱼♡～使用统一的源追踪器，避免剪贴板访问竞争喵～
+                        content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
+                        current_content = (content_type, content)
+                        # 杂鱼♡～安全获取源信息，避免剪贴板访问冲突喵～
+                        source_info = SourceTracker.get_source_info(avoid_clipboard_access=True)
                     else:
                         # 杂鱼♡～只获取内容，不获取源信息喵～
                         content_type, content, source_info = (
@@ -771,7 +791,7 @@ class ClipboardMonitor:
                 time.sleep(0.05)  # 杂鱼♡～50ms检查间隔喵～
 
             except Exception as e:
-                print(f"杂鱼♡～轮询循环出错了喵：{e}")
+                self.logger.error(f"杂鱼♡～轮询循环出错了喵：{e}")
                 time.sleep(0.1)  # 杂鱼♡～出错后稍微等久一点喵～
 
     def _handle_clipboard_change(self, content_data, source_info=None) -> None:
@@ -821,11 +841,8 @@ class ClipboardMonitor:
             ),  # 杂鱼♡～显示哈希前8位喵～
             "cache_size": len(self._content_cache),
             "source_tracking_enabled": self._enable_source_tracking,  # 杂鱼♡～显示源追踪状态喵～
-            "optimized_tracker_enabled": self._use_optimized_tracker,  # 杂鱼♡～显示是否使用优化追踪器喵～
             "focus_tracking_status": (
-                OptimizedSourceTracker.get_focus_status() if (self._enable_source_tracking and self._use_optimized_tracker)
-                else SourceTracker.get_focus_status() if self._enable_source_tracking
-                else None
+                SourceTracker.get_focus_status()
             ),  # 杂鱼♡～显示焦点跟踪状态喵～
             "async_stats": self.get_async_stats(),
         }
@@ -833,13 +850,10 @@ class ClipboardMonitor:
     def get_current_clipboard(self) -> tuple:
         """杂鱼♡～获取当前剪贴板内容喵～"""
         if self._enable_source_tracking:
-            if self._use_optimized_tracker:
-                # 杂鱼♡～使用优化的源追踪器，避免剪贴板访问竞争喵～
-                content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
-                source_info = OptimizedSourceTracker.get_optimized_source_info(avoid_clipboard_access=True)
-                return (content_type, content, source_info)
-            else:
-                return ClipboardUtils.get_clipboard_content(with_source=True)
+            # 杂鱼♡～使用统一的源追踪器，避免剪贴板访问竞争喵～
+            content_type, content, _ = ClipboardUtils.get_clipboard_content(with_source=False)
+            source_info = SourceTracker.get_source_info(avoid_clipboard_access=True)
+            return (content_type, content, source_info)
         else:
             content_type, content, source_info = ClipboardUtils.get_clipboard_content(
                 with_source=False
@@ -861,16 +875,16 @@ class SimpleUpdateHandler(BaseClipboardHandler):
         return True
 
     def _default_handle(
-        self, data: Any, source_info: Optional[Dict[str, Any]] = None
+        self, data: Any, source_info: Optional[ProcessInfo] = None
     ) -> None:
         """杂鱼♡～默认的更新处理方法喵～"""
         content_type, content = data
-        print(f"杂鱼♡～剪贴板内容更新了喵～类型：{content_type}")
+        self.logger.info(f"杂鱼♡～剪贴板内容更新了喵～类型：{content_type}")
 
         # 杂鱼♡～显示源应用程序信息喵～
         if source_info and self._include_source_info:
-            print(f"  源应用程序：{source_info.get('process_name', 'Unknown')}")
-            if source_info.get("process_path"):
-                print(f"  程序路径：{source_info['process_path']}")
-            if source_info.get("window_title"):
-                print(f"  窗口标题：{source_info['window_title']}")
+            self.logger.info(f"  源应用程序：{source_info.process_name or 'Unknown'}")
+            if source_info.process_path:
+                self.logger.info(f"  程序路径：{source_info.process_path}")
+            if source_info.window_title:
+                self.logger.info(f"  窗口标题：{source_info.window_title}")
