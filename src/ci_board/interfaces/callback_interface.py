@@ -43,7 +43,6 @@ class BaseClipboardHandler(CallbackInterface):
         """
         self._callback = callback
         self._enabled = True
-        self._filters = []
         self._include_source_info = True  # 杂鱼♡～默认包含源信息喵～
 
     def set_callback(self, callback: callable) -> None:
@@ -70,31 +69,12 @@ class BaseClipboardHandler(CallbackInterface):
         """杂鱼♡～检查处理器是否启用喵～"""
         return self._enabled
 
-    def add_filter(self, filter_func: callable) -> None:
-        """杂鱼♡～添加过滤器函数喵～"""
-        self._filters.append(filter_func)
-
-    def remove_filter(self, filter_func: callable) -> None:
-        """杂鱼♡～移除过滤器函数喵～"""
-        if filter_func in self._filters:
-            self._filters.remove(filter_func)
-
-    def _apply_filters(self, data: Any) -> bool:
-        """杂鱼♡～应用所有过滤器喵～"""
-        for filter_func in self._filters:
-            if not filter_func(data):
-                return False
-        return True
-
     def handle(self, data: Any, source_info: Optional[ProcessInfo] = None) -> None:
         """杂鱼♡～处理数据的通用方法喵～"""
         if not self._enabled:
             return
 
         if not self.is_valid(data):
-            return
-
-        if not self._apply_filters(data):
             return
 
         if self._callback:

@@ -95,13 +95,6 @@ class ClipboardUtils:
 
         return (content_type, content, source_info)
 
-    # ============= 杂鱼♡～源应用追踪喵～ =============
-
-    @classmethod
-    def get_source_application_info(cls) -> Dict[str, Any]:
-        """杂鱼♡～获取剪贴板内容源应用信息喵～"""
-        return SourceTracker.get_source_info(avoid_clipboard_access=True)
-
     # ============= 杂鱼♡～消息泵和窗口管理喵～ =============
 
     @classmethod
@@ -128,46 +121,15 @@ class ClipboardUtils:
 
     @classmethod
     def pump_messages(
-        cls, hwnd, callback: Callable = None, timeout_ms: int = 100
+        cls, hwnd, callback: Callable = None
     ) -> bool:
         """杂鱼♡～处理Windows消息泵喵～"""
-        return MessagePump.pump_messages(hwnd, callback, timeout_ms)
-
-    @classmethod
-    def wait_for_clipboard_message(cls, hwnd, timeout_ms: int = 1000) -> bool:
-        """杂鱼♡～等待剪贴板更新消息喵～"""
-        return MessagePump.wait_for_clipboard_message(hwnd, timeout_ms)
+        return MessagePump.pump_messages(hwnd, callback)
 
     @classmethod
     def get_clipboard_sequence_number(cls) -> int:
         """杂鱼♡～获取剪贴板序列号，用于检测变化喵～"""
         return MessagePump.get_clipboard_sequence_number()
-
-    # ============= 杂鱼♡～高级功能喵～ =============
-
-    @classmethod
-    def wait_for_clipboard_change(
-        cls, timeout: float = 10.0, callback: Callable[[str, Any], None] = None
-    ) -> Tuple[Optional[str], Any]:
-        """杂鱼♡～等待剪贴板变化喵～"""
-        initial_seq = cls.get_clipboard_sequence_number()
-        start_time = time.time()
-
-        while time.time() - start_time < timeout:
-            current_seq = cls.get_clipboard_sequence_number()
-            if current_seq != initial_seq:
-                content_type, content = ClipboardReader.get_clipboard_content()
-                if callback:
-                    try:
-                        callback(content_type, content)
-                    except Exception as e:
-                        cls.logger.error(f"杂鱼♡～回调函数出错喵：{e}")
-                return (content_type, content)
-
-            # 杂鱼♡～短暂休眠避免CPU占用过高喵～
-            time.sleep(0.01)
-
-        raise ClipboardTimeout(f"杂鱼♡～等待剪贴板变化超时喵～({timeout}s)")
 
     # ============= 杂鱼♡～兼容性别名喵～ =============
 

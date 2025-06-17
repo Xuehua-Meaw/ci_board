@@ -1,6 +1,6 @@
 # 杂鱼♡～本喵设计的剪贴板监控包喵～
 """
-杂鱼♡～本喵的剪贴板监控包 v0.0.6
+杂鱼♡～本喵的剪贴板监控包 v0.0.7
 一个高扩展性的剪贴板监控解决方案喵～
 """
 
@@ -11,7 +11,7 @@ from .types import BMPData, ProcessInfo
 from .utils import ClipboardUtils
 
 __author__ = "Neko"
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 # 杂鱼♡～导出主要API，让杂鱼主人使用方便喵～
 

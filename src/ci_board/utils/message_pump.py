@@ -142,8 +142,7 @@ class MessagePump:
     def pump_messages(
         cls,
         hwnd: w.HWND,
-        callback: Optional[Callable[[w.UINT, w.WPARAM, w.LPARAM], None]] = None,
-        timeout_ms: int = 100,
+        callback: Optional[Callable[[w.UINT, w.WPARAM, w.LPARAM], None]] = None
     ) -> bool:
         """
         杂鱼♡～处理Windows消息泵，支持事件驱动的剪贴板监控喵～
@@ -158,74 +157,22 @@ class MessagePump:
         """
         try:
             msg = Win32Structures.MSG()
+            result = Win32API.user32.GetMessageW(ctypes.byref(msg), hwnd, 0, 0)
 
-            if timeout_ms == 0:
-                # 杂鱼♡～非阻塞模式，只检查是否有消息喵～
-                PM_REMOVE = 0x0001
-                if Win32API.user32.PeekMessageW(
-                    ctypes.byref(msg), hwnd, 0, 0, PM_REMOVE
-                ):
-                    if msg.message == 0x0012:  # WM_QUIT
-                        return False
-
-                    # 杂鱼♡～使用窗口过程来处理消息（推荐）喵～
-                    Win32API.user32.TranslateMessage(ctypes.byref(msg))
-                    Win32API.user32.DispatchMessageW(
-                        ctypes.byref(msg)
-                    )  # 杂鱼♡～这会调用窗口过程喵～
-                    return True
+            if result == -1:  # 杂鱼♡～错误喵～
+                error_code = Win32API.kernel32.GetLastError()
+                logger.error(f"杂鱼♡～GetMessage失败，错误码：{error_code}")
+                return False
+            elif result == 0:  # 杂鱼♡～WM_QUIT消息喵～
                 return False
             else:
-                # 杂鱼♡～阻塞模式，等待消息喵～
-                result = Win32API.user32.GetMessageW(ctypes.byref(msg), hwnd, 0, 0)
-
-                if result == -1:  # 杂鱼♡～错误喵～
-                    error_code = Win32API.kernel32.GetLastError()
-                    logger.error(f"杂鱼♡～GetMessage失败，错误码：{error_code}")
-                    return False
-                elif result == 0:  # 杂鱼♡～WM_QUIT消息喵～
-                    return False
-                else:
-                    # 杂鱼♡～处理消息喵～
-                    Win32API.user32.TranslateMessage(ctypes.byref(msg))
-                    Win32API.user32.DispatchMessageW(ctypes.byref(msg))
-                    return True
+                # 杂鱼♡～处理消息喵～
+                Win32API.user32.TranslateMessage(ctypes.byref(msg))
+                Win32API.user32.DispatchMessageW(ctypes.byref(msg))
+                return True
         except Exception as e:
             logger.error(f"杂鱼♡～消息泵处理异常喵：{e}")
             return False
-
-    @classmethod
-    def wait_for_clipboard_message(cls, hwnd: w.HWND, timeout_ms: int = 1000) -> bool:
-        """杂鱼♡～等待剪贴板更新消息喵～"""
-        start_time = ctypes.windll.kernel32.GetTickCount()
-
-        while True:
-            current_time = ctypes.windll.kernel32.GetTickCount()
-            if current_time - start_time > timeout_ms:
-                return False
-
-            def message_callback(
-                message: w.UINT, wParam: w.WPARAM, lParam: w.LPARAM
-            ) -> None:
-                if message == Win32API.WM_CLIPBOARDUPDATE:
-                    logger.debug("杂鱼♡～收到剪贴板更新消息喵～")
-                    # 杂鱼♡～这里可以处理剪贴板更新逻辑喵～
-
-            # 杂鱼♡～临时设置回调喵～
-            original_callback = cls._window_callbacks.get(hwnd)
-            cls._window_callbacks[hwnd] = message_callback
-
-            try:
-                # 杂鱼♡～非阻塞式检查消息喵～
-                if cls.pump_messages(hwnd, timeout_ms=0):
-                    # 杂鱼♡～检查是否收到了剪贴板更新消息喵～
-                    return True
-
-                # 杂鱼♡～短暂休眠避免CPU占用过高喵～
-                time.sleep(0.01)
-            finally:
-                # 杂鱼♡～恢复原始回调喵～
-                cls._window_callbacks[hwnd] = original_callback
 
     @classmethod
     def get_clipboard_sequence_number(cls) -> int:

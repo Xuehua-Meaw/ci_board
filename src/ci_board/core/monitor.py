@@ -747,18 +747,11 @@ class ClipboardMonitor:
     def _event_driven_monitor_loop(self) -> None:
         """杂鱼♡～事件驱动监控循环（推荐）喵～"""
         self.logger.info("杂鱼♡～使用事件驱动模式，等待剪贴板更新消息喵～")
-        self.logger.info("杂鱼♡～现在使用混合模式：阻塞等待消息但定期检查停止事件喵～")
 
         # 杂鱼♡～混合事件驱动循环：使用短超时的阻塞消息等待+定期检查停止事件喵～
         while not self._stop_event.is_set():
             try:
-                # 杂鱼♡～使用短超时阻塞等待消息，这样可以更好地接收剪贴板消息喵～
-                # 杂鱼♡～timeout_ms=50表示最多等待50毫秒，然后检查停止事件喵～
-                message_received = ClipboardUtils.pump_messages(self._hwnd, None, 50)
-
-                # 杂鱼♡～如果没有收到消息，稍微休息一下再继续喵～
-                if not message_received:
-                    time.sleep(0.01)  # 杂鱼♡～10毫秒喵～
+                ClipboardUtils.pump_messages(self._hwnd, None)
 
             except Exception as e:
                 self.logger.error(f"杂鱼♡～事件驱动循环出错了喵：{e}")
