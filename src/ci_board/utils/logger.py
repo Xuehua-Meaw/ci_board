@@ -78,8 +78,8 @@ class ColoredFormatter(logging.Formatter):
 def setup_ci_board_logging(
     debug: bool = False,
     log_file: Optional[str] = None,
-    console_level: Optional[LogLevel] = None,
-    file_level: Optional[LogLevel] = None,
+    console_level: Optional[LogLevel] = LogLevel.INFO,
+    file_level: Optional[LogLevel] = LogLevel.WARNING,
 ) -> logging.Logger:
     """杂鱼♡～设置ci_board日志系统喵～"""
 

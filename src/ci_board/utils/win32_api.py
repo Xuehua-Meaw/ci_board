@@ -80,9 +80,11 @@ class Win32API:
     kernel32 = ctypes.WinDLL("kernel32")
     gdi32 = ctypes.WinDLL("gdi32")
     psapi = ctypes.WinDLL("psapi")
+    shell32 = ctypes.WinDLL("shell32")
 
     # 杂鱼♡～常量定义喵～
     WM_CLIPBOARDUPDATE = 0x031D
+    WM_QUIT = 0x0012
     HWND_MESSAGE = w.HWND(-3)
 
     # 杂鱼♡～窗口过程函数类型定义喵～
@@ -204,6 +206,11 @@ class Win32API:
         cls.user32.SetWinEventHook.restype = w.HANDLE
         cls.user32.UnhookWinEvent.argtypes = [w.HANDLE]
         cls.user32.UnhookWinEvent.restype = w.BOOL
+
+        # 杂鱼♡～Shell32 HDROP 文件拖放函数喵～
+        cls.shell32.DragQueryFileW.argtypes = [w.HANDLE, w.UINT, w.LPWSTR, w.UINT]
+        cls.shell32.DragQueryFileW.restype = w.UINT
+        cls.shell32.DragFinish.argtypes = [w.HANDLE]
 
         # 杂鱼♡～进程路径查询函数喵～
         cls.kernel32.QueryFullProcessImageNameW.argtypes = [

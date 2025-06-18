@@ -7,13 +7,8 @@ import time
 from typing import Any, Callable, Dict, List, Optional
 
 from .logger import get_component_logger
-from .win32_api import (
-    ClipboardError,
-    ClipboardFormat,
-    ClipboardTimeout,
-    Win32API,
-    Win32Structures,
-)
+from .win32_api import (ClipboardError, ClipboardFormat, ClipboardTimeout,
+                        Win32API, Win32Structures)
 
 
 class ClipboardReader:

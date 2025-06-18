@@ -1,4 +1,4 @@
-# 杂鱼♡～核心模块初始化文件喵～
-from .monitor import ClipboardMonitor, SimpleUpdateHandler
+# 杂鱼♡～这是本喵的核心模块喵～
+from .monitor import ClipboardMonitor
 
-__all__ = ["ClipboardMonitor", "SimpleUpdateHandler"]
+__all__ = ["ClipboardMonitor"]

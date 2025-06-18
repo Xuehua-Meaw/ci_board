@@ -1,7 +1,6 @@
 # 杂鱼♡～本喵为杂鱼主人创建的Windows消息泵处理器喵～
 import ctypes
 import ctypes.wintypes as w
-import time
 from typing import Callable, Dict, Optional
 
 from .logger import get_component_logger
@@ -142,7 +141,7 @@ class MessagePump:
     def pump_messages(
         cls,
         hwnd: w.HWND,
-        callback: Optional[Callable[[w.UINT, w.WPARAM, w.LPARAM], None]] = None
+        callback: Optional[Callable[[w.UINT, w.WPARAM, w.LPARAM], None]] = None,
     ) -> bool:
         """
         杂鱼♡～处理Windows消息泵，支持事件驱动的剪贴板监控喵～

@@ -1,15 +1,18 @@
 # 杂鱼♡～本喵设计的回调接口定义喵～
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Generic, Optional, TypeVar
 
 from ..types.t_source import ProcessInfo
+from ..utils.logger import get_component_logger
+
+T = TypeVar("T")
 
 
-class CallbackInterface(ABC):
+class CallbackInterface(Generic[T], ABC):
     """杂鱼♡～抽象的回调接口，所有处理器都要继承这个喵～"""
 
     @abstractmethod
-    def handle(self, data: Any, source_info: Optional[ProcessInfo] = None) -> None:
+    def handle(self, data: T, source_info: Optional[ProcessInfo] = None) -> None:
         """
         杂鱼♡～处理剪贴板数据的抽象方法喵～
 
@@ -19,7 +22,7 @@ class CallbackInterface(ABC):
         """
 
     @abstractmethod
-    def is_valid(self, data: Any) -> bool:
+    def is_valid(self, data: T) -> bool:
         """
         杂鱼♡～检查数据是否有效的抽象方法喵～
 
@@ -31,7 +34,7 @@ class CallbackInterface(ABC):
         """
 
 
-class BaseClipboardHandler(CallbackInterface):
+class BaseClipboardHandler(CallbackInterface[T]):
     """杂鱼♡～基础剪贴板处理器，提供通用功能喵～"""
 
     def __init__(self, callback: Optional[callable] = None):
@@ -44,6 +47,7 @@ class BaseClipboardHandler(CallbackInterface):
         self._callback = callback
         self._enabled = True
         self._include_source_info = True  # 杂鱼♡～默认包含源信息喵～
+        self.logger = get_component_logger(f"handler.{self.__class__.__name__.lower()}")
 
     def set_callback(self, callback: callable) -> None:
         """杂鱼♡～设置回调函数喵～"""
@@ -69,7 +73,7 @@ class BaseClipboardHandler(CallbackInterface):
         """杂鱼♡～检查处理器是否启用喵～"""
         return self._enabled
 
-    def handle(self, data: Any, source_info: Optional[ProcessInfo] = None) -> None:
+    def handle(self, data: T, source_info: Optional[ProcessInfo] = None) -> None:
         """杂鱼♡～处理数据的通用方法喵～"""
         if not self._enabled:
             return
@@ -78,18 +82,32 @@ class BaseClipboardHandler(CallbackInterface):
             return
 
         if self._callback:
-            self._callback(data, source_info if self._include_source_info else None)
+            # 杂鱼♡～本喵会帮你检查回调函数需不需要源信息喵～
+            import inspect
+
+            try:
+                sig = inspect.signature(self._callback)
+                if len(sig.parameters) >= 2:
+                    self._callback(
+                        data, source_info if self._include_source_info else None
+                    )
+                else:
+                    self._callback(data)
+            except (ValueError, TypeError):
+                # 杂鱼♡～如果获取签名失败，就默认只传数据喵～
+                self._callback(data)
+
         else:
             self._default_handle(data, source_info)
 
+    @abstractmethod
     def _default_handle(
-        self, data: Any, source_info: Optional[ProcessInfo] = None
+        self, data: T, source_info: Optional[ProcessInfo] = None
     ) -> None:
-        """杂鱼♡～默认处理方法，子类可以重写喵～"""
-        # 杂鱼♡～这里需要添加logger，但BaseClipboardHandler没有定义logger喵～
+        """杂鱼♡～默认处理方法，子类必须重写喵～"""
         # 杂鱼♡～子类应该重写这个方法并使用自己的logger喵～
-        print(f"杂鱼♡～处理数据：{data}")
+        self.logger.info(f"杂鱼♡～处理数据：{str(data)[:100]}")
         if source_info and self._include_source_info:
-            print(
+            self.logger.info(
                 f"杂鱼♡～源应用程序：{source_info.process_name} ({source_info.process_path})"
             )
