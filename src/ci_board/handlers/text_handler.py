@@ -6,7 +6,6 @@ from ..interfaces.callback_interface import BaseClipboardHandler
 from ..types import ProcessInfo
 from ..utils.win32_api import ClipboardFormat, Win32API
 from ci_board.utils import get_component_logger
-from ci_board.core.deduplicator import Deduplicator
 
 # 杂鱼♡～获取组件专用logger喵～
 logger = get_component_logger("handlers.text_handler")
@@ -15,19 +14,20 @@ logger = get_component_logger("handlers.text_handler")
 class TextHandler(BaseClipboardHandler[str]):
     """杂鱼♡～专门处理文本的处理器喵～"""
 
-    def __init__(self, callback: Optional[Callable] = None, deduplicator: Optional[Deduplicator] = None):
+    def __init__(
+        self, callback: Optional[Callable[[str, Optional[ProcessInfo]], None]] = None
+    ):
         """
         杂鱼♡～初始化文本处理器喵～
 
         Args:
-            callback: 处理文本的回调函数
-            deduplicator: 去重器实例
+            callback: 处理文本的回调函数，接收(text, source_info)
         """
-        super().__init__(callback, deduplicator)
+        super().__init__(callback)
 
     def get_interested_formats(self) -> List[int]:
         """杂鱼♡～本喵只对Unicode文本感兴趣喵～"""
-        return [ClipboardFormat.UNICODETEXT.value]
+        return [ClipboardFormat.CF_UNICODETEXT.value]
 
     def process_data(self, format_id: int, handle: int, source_info: Optional[ProcessInfo]) -> None:
         """杂鱼♡～处理文本的原始数据句柄喵～"""
@@ -36,10 +36,6 @@ class TextHandler(BaseClipboardHandler[str]):
 
         text = self._read_text_from_handle(handle)
         if not text or not self._is_valid_text(text):
-            return
-
-        # 杂鱼♡～在处理前，先用本喵的去重器检查一下喵！～
-        if self._deduplicator and self._deduplicator.is_duplicate('text', text):
             return
 
         if self._callback:

@@ -5,7 +5,6 @@ from typing import Callable, List, Optional
 
 from ci_board.interfaces import BaseClipboardHandler
 from ci_board.types import FileInfo, ProcessInfo
-from ci_board.core.deduplicator import Deduplicator
 from ci_board.utils import get_component_logger
 from ..utils.win32_api import ClipboardFormat, Win32API
 
@@ -16,15 +15,17 @@ logger = get_component_logger("handlers.file_handler")
 class FileHandler(BaseClipboardHandler[List[str]]):
     """杂鱼♡～专门处理文件的处理器喵～"""
 
-    def __init__(self, callback: Optional[Callable] = None, deduplicator: Optional[Deduplicator] = None):
+    def __init__(
+        self,
+        callback: Optional[Callable[[List[str], Optional[ProcessInfo]], None]] = None,
+    ):
         """
         杂鱼♡～初始化文件处理器喵～
 
         Args:
-            callback: 处理文件列表的回调函数
-            deduplicator: 去重器实例
+            callback: 处理文件列表的回调函数, 接收 (files, source_info)
         """
-        super().__init__(callback, deduplicator)
+        super().__init__(callback)
 
     def is_valid(self, data: Optional[List[str]] = None) -> bool:
         """杂鱼♡～检查文件数据是否有效喵～"""
@@ -41,7 +42,7 @@ class FileHandler(BaseClipboardHandler[List[str]]):
 
     def get_interested_formats(self) -> List[int]:
         """杂鱼♡～本喵只对文件列表（HDROP）感兴趣喵～"""
-        return [ClipboardFormat.HDROP.value]
+        return [ClipboardFormat.CF_HDROP.value]
 
     def process_data(self, format_id: int, handle: int, source_info: Optional[ProcessInfo]) -> None:
         """杂鱼♡～处理文件列表的原始数据句柄喵～"""
@@ -50,10 +51,6 @@ class FileHandler(BaseClipboardHandler[List[str]]):
 
         file_list = self._read_files_from_handle(handle)
         if not file_list:
-            return
-
-        # 杂鱼♡～在处理前，先用本喵的去重器检查一下喵！～
-        if self._deduplicator and self._deduplicator.is_duplicate('files', file_list):
             return
 
         if self._callback:

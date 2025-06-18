@@ -9,7 +9,6 @@ from ci_board.utils import ClipboardReader, get_component_logger
 from ci_board.handlers import FileHandler, ImageHandler, TextHandler
 
 # 杂鱼♡～导入核心组件喵～
-from ci_board.core.deduplicator import Deduplicator
 from ci_board.core.executor import AsyncExecutor
 from ci_board.core.message_pump_wrapper import MessagePumpWrapper
 from ci_board.core.source_tracker_wrapper import SourceTrackerWrapper
@@ -49,7 +48,6 @@ class ClipboardMonitor:
             self._source_tracker = SourceTrackerWrapper()
         else:
             self._source_tracker = None
-        self._deduplicator = Deduplicator()
         if self._async_processing:
             self._executor = AsyncExecutor(
                 max_workers=max_workers, handler_timeout=handler_timeout
@@ -85,13 +83,13 @@ class ClipboardMonitor:
     def _create_handler_from_callback(
         self, content_type: str, callback: Callable
     ) -> BaseClipboardHandler:
-        """杂鱼♡～根据回调函数创建对应的处理器，并把本喵的去重器传给它喵～"""
+        """杂鱼♡～根据回调函数创建对应的处理器喵～"""
         if content_type == "text":
-            return TextHandler(callback, deduplicator=self._deduplicator)
+            return TextHandler(callback)
         if content_type == "image":
-            return ImageHandler(callback, deduplicator=self._deduplicator)
+            return ImageHandler(callback)
         if content_type == "files":
-            return FileHandler(callback, deduplicator=self._deduplicator)
+            return FileHandler(callback)
         raise ValueError(f"杂鱼♡～无法为类型 {content_type} 创建处理器喵～")
 
     def start(self) -> bool:

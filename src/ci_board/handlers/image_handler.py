@@ -7,7 +7,6 @@ from ..interfaces.callback_interface import BaseClipboardHandler
 from ..types import BMPData, DIBData, ProcessInfo
 from ..utils.win32_api import ClipboardFormat, Win32API, Win32Structures
 from ci_board.utils import get_component_logger
-from ci_board.core.deduplicator import Deduplicator
 
 # 杂鱼♡～获取组件专用logger喵～
 logger = get_component_logger("handlers.image_handler")
@@ -20,15 +19,17 @@ BI_RGB = 0
 class ImageHandler(BaseClipboardHandler[DIBData]):
     """杂鱼♡～专门处理图片的处理器喵～"""
 
-    def __init__(self, callback: Optional[Callable] = None, deduplicator: Optional[Deduplicator] = None):
+    def __init__(
+        self,
+        callback: Optional[Callable[[BMPData, Optional[ProcessInfo]], None]] = None,
+    ):
         """
         杂鱼♡～初始化图片处理器喵～
 
         Args:
-            callback: 处理BMP图片的回调函数
-            deduplicator: 去重器实例
+            callback: 处理BMP图片的回调函数, 接收 (bmp_data, source_info)
         """
-        super().__init__(callback, deduplicator)
+        super().__init__(callback)
 
     def get_interested_formats(self) -> List[int]:
         """杂鱼♡～本喵对两种DIB格式都感兴趣喵～"""
@@ -41,10 +42,6 @@ class ImageHandler(BaseClipboardHandler[DIBData]):
 
         dib_data = self._read_dib_from_handle(handle)
         if not dib_data:
-            return
-
-        # 杂鱼♡～在处理前，先用本喵的去重器检查一下喵！～
-        if self._deduplicator and self._deduplicator.is_duplicate('image', dib_data):
             return
 
         bmp_data = self._convert_dib_to_bmp(dib_data)
