@@ -4,8 +4,8 @@ import json
 import time
 from typing import Any, Dict
 
-from ..types import DIBData
-from ..utils.logger import get_component_logger
+from ci_board.types import DIBData
+from ci_board.utils import get_component_logger
 
 
 class Deduplicator:

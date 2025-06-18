@@ -1,7 +1,8 @@
 # 杂鱼♡～本喵设计的回调接口定义喵～
 from abc import ABC, abstractmethod
-from typing import Generic, Optional, TypeVar
+from typing import Callable, Generic, List, Optional, TypeVar
 
+from ..core.deduplicator import Deduplicator
 from ..types.t_source import ProcessInfo
 from ..utils.logger import get_component_logger
 
@@ -12,42 +13,51 @@ class CallbackInterface(Generic[T], ABC):
     """杂鱼♡～抽象的回调接口，所有处理器都要继承这个喵～"""
 
     @abstractmethod
+    def get_interested_formats(self) -> List[int]:
+        """杂鱼♡～告诉本喵你对哪些剪贴板格式感兴趣喵～"""
+        pass
+
+    @abstractmethod
+    def process_data(self, format_id: int, handle: int, source_info: Optional[ProcessInfo]) -> None:
+        """
+        杂鱼♡～处理原始剪贴板数据的抽象方法喵～
+        你得自己锁内存、读数据、解锁，哼～
+        """
+        pass
+
     def handle(self, data: T, source_info: Optional[ProcessInfo] = None) -> None:
         """
         杂鱼♡～处理剪贴板数据的抽象方法喵～
-
-        Args:
-            data: 剪贴板数据，类型根据具体处理器而定
-            source_info: 源应用程序信息，包含进程路径、窗口标题等
+        （这个方法很快就要被废弃了喵，哼～）
         """
+        pass
 
-    @abstractmethod
     def is_valid(self, data: T) -> bool:
         """
         杂鱼♡～检查数据是否有效的抽象方法喵～
-
-        Args:
-            data: 需要验证的数据
-
-        Returns:
-            bool: 数据是否有效
+        （这个方法也快没用了喵～）
         """
+        return True
 
 
 class BaseClipboardHandler(CallbackInterface[T]):
     """杂鱼♡～基础剪贴板处理器，提供通用功能喵～"""
 
-    def __init__(self, callback: Optional[callable] = None):
+    def __init__(self, callback: Optional[Callable] = None, deduplicator: Optional[Deduplicator] = None):
         """
         杂鱼♡～初始化处理器喵～
 
         Args:
-            callback: 可选的回调函数，现在接收(data, source_info)两个参数
+            callback: 可选的回调函数
+            deduplicator: 可选的去重器实例喵～
         """
         self._callback = callback
+        self._deduplicator = deduplicator
         self._enabled = True
         self._include_source_info = True  # 杂鱼♡～默认包含源信息喵～
-        self.logger = get_component_logger(f"handler.{self.__class__.__name__.lower()}")
+        self.logger = get_component_logger(
+            f"handler.{self.__class__.__name__.lower()}"
+        )
 
     def set_callback(self, callback: callable) -> None:
         """杂鱼♡～设置回调函数喵～"""

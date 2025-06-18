@@ -10,8 +10,7 @@ import threading
 import time
 from typing import Any, Dict
 
-from ..utils.logger import get_component_logger
-from ..utils.win32_api import Win32API
+from ci_board.utils import get_component_logger, Win32API
 
 
 class SourceTracker:

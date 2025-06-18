@@ -102,6 +102,10 @@ class Win32API:
         cls.user32.GetClipboardData.argtypes = [w.UINT]
         cls.user32.GetClipboardData.restype = w.HANDLE
 
+        # 杂鱼♡～枚举剪贴板格式函数喵～
+        cls.user32.EnumClipboardFormats.argtypes = [w.UINT]
+        cls.user32.EnumClipboardFormats.restype = w.UINT
+
         # 杂鱼♡～内存操作函数喵～
         cls.kernel32.GlobalLock.argtypes = [w.HGLOBAL]
         cls.kernel32.GlobalLock.restype = w.LPVOID

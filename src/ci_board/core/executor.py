@@ -3,11 +3,9 @@ import queue
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
-from ..interfaces.callback_interface import BaseClipboardHandler
-from ..types import ProcessInfo
-from ..utils.logger import get_component_logger
+from ci_board.utils import get_component_logger
 
 
 class AsyncExecutor:
@@ -58,14 +56,9 @@ class AsyncExecutor:
         self._executor = None
         self.logger.info("杂鱼♡～异步执行器已关闭喵～")
 
-    def submit(
-        self,
-        handler: BaseClipboardHandler,
-        content: Any,
-        source_info: Optional[ProcessInfo],
-    ):
+    def submit(self, handler_method: Callable, args: tuple):
         """杂鱼♡～提交一个新任务到队列里喵～"""
-        self._task_queue.put((handler, content, source_info))
+        self._task_queue.put((handler_method, args))
 
     def get_stats(self) -> Dict[str, Any]:
         """杂鱼♡～获取执行器统计信息喵～"""
@@ -102,9 +95,9 @@ class AsyncExecutor:
                 self._executor_stop_event.set()
                 return
 
-            handler, content, source_info = task
-            future = self._executor.submit(handler.handle, content, source_info)
-            futures[future] = (type(handler).__name__, time.time())
+            handler_method, args = task
+            future = self._executor.submit(handler_method, *args)
+            futures[future] = (handler_method.__qualname__, time.time())
             self._stats["tasks_submitted"] += 1
             self._stats["active_tasks"] += 1
         except queue.Empty:

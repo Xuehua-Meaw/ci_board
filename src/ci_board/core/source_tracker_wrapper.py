@@ -2,9 +2,9 @@
 import time
 from typing import Any, Dict, Optional
 
-from ..types import ProcessInfo
-from ..utils.logger import get_component_logger
-from .source_tracker_ import SourceTracker as StaticSourceTracker
+from ci_board.types import ProcessInfo
+from ci_board.utils import get_component_logger
+from ci_board.core.source_tracker_ import SourceTracker as StaticSourceTracker
 
 
 class SourceTrackerWrapper:

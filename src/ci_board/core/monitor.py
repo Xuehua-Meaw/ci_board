@@ -1,17 +1,18 @@
 # 杂鱼♡～本喵的核心剪贴板监控器喵～
 import threading
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional, Union
+from typing import Callable, Dict, List, Literal, Optional, Union
 
-from ..handlers import FileHandler, ImageHandler, TextHandler
-from ..interfaces.callback_interface import BaseClipboardHandler
-from ..types import DIBData, ProcessInfo
-from ..utils.clipboard_reader import ClipboardReader
-from ..utils.logger import get_component_logger
-from .deduplicator import Deduplicator
-from .executor import AsyncExecutor
-from .message_pump_wrapper import MessagePumpWrapper
-from .source_tracker_wrapper import SourceTrackerWrapper
+from ci_board.interfaces import BaseClipboardHandler
+from ci_board.types import ProcessInfo
+from ci_board.utils import ClipboardReader, get_component_logger
+from ci_board.handlers import FileHandler, ImageHandler, TextHandler
+
+# 杂鱼♡～导入核心组件喵～
+from ci_board.core.deduplicator import Deduplicator
+from ci_board.core.executor import AsyncExecutor
+from ci_board.core.message_pump_wrapper import MessagePumpWrapper
+from ci_board.core.source_tracker_wrapper import SourceTrackerWrapper
 
 
 class ClipboardMonitor:
@@ -43,6 +44,7 @@ class ClipboardMonitor:
 
         # 杂鱼♡～实例化各个组件喵～
         self._pump = MessagePumpWrapper()
+        self._reader = ClipboardReader()
         if self._enable_source_tracking:
             self._source_tracker = SourceTrackerWrapper()
         else:
@@ -83,13 +85,13 @@ class ClipboardMonitor:
     def _create_handler_from_callback(
         self, content_type: str, callback: Callable
     ) -> BaseClipboardHandler:
-        """杂鱼♡～根据回调函数创建对应的处理器喵～"""
+        """杂鱼♡～根据回调函数创建对应的处理器，并把本喵的去重器传给它喵～"""
         if content_type == "text":
-            return TextHandler(callback)
+            return TextHandler(callback, deduplicator=self._deduplicator)
         if content_type == "image":
-            return ImageHandler(callback)
+            return ImageHandler(callback, deduplicator=self._deduplicator)
         if content_type == "files":
-            return FileHandler(callback)
+            return FileHandler(callback, deduplicator=self._deduplicator)
         raise ValueError(f"杂鱼♡～无法为类型 {content_type} 创建处理器喵～")
 
     def start(self) -> bool:
@@ -178,68 +180,61 @@ class ClipboardMonitor:
 
     def _on_clipboard_update(self) -> None:
         """杂鱼♡～处理剪贴板更新的核心逻辑喵～"""
-        # 杂鱼♡～用序列号做第一层过滤喵～
         current_seq = self._pump.get_sequence_number()
         if current_seq == self._last_sequence_number:
             return
         self._last_sequence_number = current_seq
 
-        # 杂鱼♡～稍微等一下，让剪贴板和源信息都准备好喵～
         time.sleep(0.05)
-
-        # 杂鱼♡～获取内容和来源喵～
-        content_type, content = ClipboardReader.get_clipboard_content()
-        if content is None:
-            return
-
-        # 杂鱼♡～在这里进行类型转换喵！～
-        if content_type == "image" and isinstance(content, dict):
-            try:
-                content = DIBData(
-                    width=content.get("width", 0),
-                    height=content.get("height", 0),
-                    bit_count=content.get("bit_count", 0),
-                    compression=content.get("compression", 0),
-                    data=content.get("data"),
-                    header=content.get("header"),
-                )
-            except Exception as e:
-                self.logger.error(f"无法将字典转换为DIBData喵: {e}")
-                return
-
-        # 杂鱼♡～检查内容是否重复喵～
-        if self._deduplicator.is_duplicate(content_type, content):
-            return
 
         source_info: Optional[ProcessInfo] = None
         if self._source_tracker:
-            # 杂鱼♡～现在用更可靠的方式获取源信息喵～
-            source_info = self._source_tracker.get_source_info(
-                avoid_clipboard_access=False
-            )
+            source_info = self._source_tracker.get_source_info(avoid_clipboard_access=False)
 
-        self.logger.info(f"检测到新的 {content_type} 内容，准备分发给处理器...")
-
-        # 杂鱼♡～分发给对应的处理器喵～
-        self._dispatch_to_handlers(content_type, content, source_info)
-
-    def _dispatch_to_handlers(
-        self, content_type: str, content: Any, source_info: Optional[ProcessInfo]
-    ):
-        """杂鱼♡～把内容分发给注册的处理器喵～"""
-        if content_type not in self._handlers:
+        available_formats = self._reader.get_available_formats()
+        if not available_formats:
             return
 
-        for handler in self._handlers[content_type]:
-            if self._executor:
-                self.logger.debug(f"异步提交任务给 {type(handler).__name__}...")
-                self._executor.submit(handler, content, source_info)
-            else:
-                self.logger.debug(f"同步执行处理器 {type(handler).__name__}...")
-                try:
-                    handler.handle(content, source_info)
-                except Exception as e:
-                    self.logger.error(f"同步执行处理器失败喵: {e}", exc_info=True)
+        self.logger.debug(f"剪贴板上有这些格式喵: {available_formats}")
+
+        # 杂鱼♡～为每个可用的格式找到对它感兴趣的处理器喵～
+        for format_id in available_formats:
+            # 杂鱼♡～先不获取句柄，只检查有没有处理器对它感兴趣
+            interested_handlers = []
+            for handler_list in self._handlers.values():
+                for handler in handler_list:
+                    if format_id in handler.get_interested_formats():
+                        interested_handlers.append(handler)
+
+            # 杂鱼♡～如果找到了，就获取句柄并分发任务喵～
+            if interested_handlers:
+                handle = self._reader.get_handle_for_format(format_id)
+                if not handle:
+                    self.logger.warning(f"无法获取格式 {format_id} 的句柄喵！")
+                    continue
+
+                # 杂鱼♡～只处理一次，避免重复喵～
+                self.logger.info(f"为格式 {format_id} 找到了 {len(interested_handlers)} 个处理器，开始处理...")
+                for handler in interested_handlers:
+                    self._dispatch_to_handler(handler, format_id, handle, source_info)
+
+                # 杂鱼♡～处理完一种格式后就跳出，避免同一个剪贴板事件被不同类型的处理器重复处理
+                # （比如一个事件同时有文本和图片格式）
+                # 哼，这里可以根据杂鱼主人的需求调整策略喵～
+                break
+
+    def _dispatch_to_handler(self, handler: BaseClipboardHandler, format_id: int, handle: int, source_info: Optional[ProcessInfo]):
+        """杂鱼♡～把原始数据句柄分发给单个处理器喵～"""
+        if self._executor:
+            self.logger.debug(f"异步提交任务给 {type(handler).__name__}...")
+            # 注意：这里的 executor 需要能够接受这些参数
+            self._executor.submit(handler.process_data, (format_id, handle, source_info))
+        else:
+            self.logger.debug(f"同步执行处理器 {type(handler).__name__}...")
+            try:
+                handler.process_data(format_id, handle, source_info)
+            except Exception as e:
+                self.logger.error(f"同步执行处理器失败喵: {e}", exc_info=True)
 
     def get_status(self) -> dict:
         """杂鱼♡～获取监控器状态喵～"""

@@ -1,9 +1,11 @@
 # 杂鱼♡～这是本喵为MessagePump写的包装器喵～
 from typing import Any, Callable, Optional
 
-from ..utils.logger import get_component_logger
-from ..utils.message_pump import MessagePump as StaticMessagePump
-from ..utils.win32_api import Win32API
+from ci_board.utils import (
+    get_component_logger,
+    Win32API,
+    MessagePump as StaticMessagePump,
+)
 
 
 class MessagePumpWrapper:
