@@ -2,7 +2,7 @@
 
 ![CI/CD](https://github.com/Xuehua-Meaw/ci_board/actions/workflows/ci_board_CICD.yml/badge.svg)
 
-> 杂鱼♡～这可是本喵为杂鱼主人精心重构的 Windows 剪贴板监控库 v0.1.0 喵～
+> 杂鱼♡～这可是本喵为杂鱼主人精心重构的 Windows 剪贴板监控库 v0.1.1 喵～
 
 ## 🎯 项目概览
 
@@ -21,7 +21,7 @@
 - 🔒 **类型安全** - 大量使用 `dataclasses` 和 `Generics`，让代码更健壮，杂鱼主人不容易犯错喵！
 
 ### 📊 项目信息
-- **版本**: v0.1.0
+- **版本**: v0.1.1
 - **Python版本**: >=3.8
 - **平台**: Windows
 - **依赖**: 纯Python，无强制第三方依赖
