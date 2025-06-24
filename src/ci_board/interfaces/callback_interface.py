@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Generic, List, Optional, TypeVar
 
-from ..core.deduplicator import Deduplicator
+from ..core.context_cache import ContextCache
 from ..types.t_source import ProcessInfo
 from ..utils.logger import get_component_logger
 
@@ -43,16 +43,16 @@ class CallbackInterface(Generic[T], ABC):
 class BaseClipboardHandler(CallbackInterface[T]):
     """杂鱼♡～基础剪贴板处理器，提供通用功能喵～"""
 
-    def __init__(self, callback: Optional[Callable] = None, deduplicator: Optional[Deduplicator] = None):
+    def __init__(self, callback: Optional[Callable] = None, context_cache: Optional[ContextCache] = None):
         """
         杂鱼♡～初始化处理器喵～
 
         Args:
             callback: 可选的回调函数
-            deduplicator: 可选的去重器实例喵～
+            context_cache: 可选的上下文缓存实例喵～
         """
         self._callback = callback
-        self._deduplicator = deduplicator
+        self._context_cache = context_cache
         self._enabled = True
         self._include_source_info = True  # 杂鱼♡～默认包含源信息喵～
         self.logger = get_component_logger(
@@ -82,6 +82,34 @@ class BaseClipboardHandler(CallbackInterface[T]):
     def is_enabled(self) -> bool:
         """杂鱼♡～检查处理器是否启用喵～"""
         return self._enabled
+
+    @abstractmethod
+    def _calculate_hash(self, content: T) -> str:
+        """
+        杂鱼♡～计算内容哈希的抽象方法，每个处理器必须实现喵～
+        
+        Args:
+            content: 要计算哈希的内容
+            
+        Returns:
+            内容的哈希字符串
+        """
+        pass
+
+    def _is_duplicate_content(self, content: T) -> bool:
+        """
+        杂鱼♡～检查内容是否重复，使用上下文缓存和处理器自己的哈希计算喵～
+        
+        Args:
+            content: 要检查的内容
+            
+        Returns:
+            True 如果是重复内容，False 如果不是
+        """
+        if not self._context_cache:
+            return False
+        
+        return self._context_cache.is_duplicate(content, self._calculate_hash)
 
     def handle(self, data: T, source_info: Optional[ProcessInfo] = None) -> None:
         """杂鱼♡～处理数据的通用方法喵～"""

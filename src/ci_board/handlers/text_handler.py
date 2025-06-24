@@ -1,12 +1,13 @@
 # 杂鱼♡～本喵的文本处理器喵～
 import ctypes
+import hashlib
 from typing import Callable, List, Optional
 
 from ..interfaces.callback_interface import BaseClipboardHandler
 from ..types import ProcessInfo
 from ..utils.win32_api import ClipboardFormat, Win32API
 from ci_board.utils import get_component_logger
-from ci_board.core.deduplicator import Deduplicator
+from ci_board.core.context_cache import ContextCache
 
 # 杂鱼♡～获取组件专用logger喵～
 logger = get_component_logger("handlers.text_handler")
@@ -15,19 +16,23 @@ logger = get_component_logger("handlers.text_handler")
 class TextHandler(BaseClipboardHandler[str]):
     """杂鱼♡～专门处理文本的处理器喵～"""
 
-    def __init__(self, callback: Optional[Callable] = None, deduplicator: Optional[Deduplicator] = None):
+    def __init__(self, callback: Optional[Callable] = None, context_cache: Optional[ContextCache] = None):
         """
         杂鱼♡～初始化文本处理器喵～
 
         Args:
             callback: 处理文本的回调函数
-            deduplicator: 去重器实例
+            context_cache: 上下文缓存实例
         """
-        super().__init__(callback, deduplicator)
+        super().__init__(callback, context_cache)
 
     def get_interested_formats(self) -> List[int]:
         """杂鱼♡～本喵只对Unicode文本感兴趣喵～"""
         return [ClipboardFormat.UNICODETEXT.value]
+
+    def _calculate_hash(self, content: str) -> str:
+        """杂鱼♡～计算文本内容的哈希值喵～"""
+        return hashlib.md5(content.encode("utf-8")).hexdigest()
 
     def process_data(self, format_id: int, handle: int, source_info: Optional[ProcessInfo]) -> None:
         """杂鱼♡～处理文本的原始数据句柄喵～"""
@@ -38,8 +43,8 @@ class TextHandler(BaseClipboardHandler[str]):
         if not text or not self._is_valid_text(text):
             return
 
-        # 杂鱼♡～在处理前，先用本喵的去重器检查一下喵！～
-        if self._deduplicator and self._deduplicator.is_duplicate('text', text):
+        # 杂鱼♡～在处理前，先用本喵的上下文缓存检查一下喵！～
+        if self._is_duplicate_content(text):
             return
 
         if self._callback:
