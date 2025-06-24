@@ -8,10 +8,7 @@ from ..interfaces.callback_interface import BaseClipboardHandler
 from ..types import BMPData, DIBData, ProcessInfo
 from ..utils.win32_api import ClipboardFormat, Win32API, Win32Structures
 from ci_board.utils import get_component_logger
-<<<<<<< HEAD
 from ci_board.core.context_cache import ContextCache
-=======
->>>>>>> main
 
 # 杂鱼♡～获取组件专用logger喵～
 logger = get_component_logger("handlers.image_handler")
@@ -24,28 +21,15 @@ BI_RGB = 0
 class ImageHandler(BaseClipboardHandler[DIBData]):
     """杂鱼♡～专门处理图片的处理器喵～"""
 
-<<<<<<< HEAD
     def __init__(self, callback: Optional[Callable] = None, context_cache: Optional[ContextCache] = None):
-=======
-    def __init__(
-        self,
-        callback: Optional[Callable[[BMPData, Optional[ProcessInfo]], None]] = None,
-    ):
->>>>>>> main
         """
         杂鱼♡～初始化图片处理器喵～
 
         Args:
-<<<<<<< HEAD
             callback: 处理BMP图片的回调函数
             context_cache: 上下文缓存实例
         """
         super().__init__(callback, context_cache)
-=======
-            callback: 处理BMP图片的回调函数, 接收 (bmp_data, source_info)
-        """
-        super().__init__(callback)
->>>>>>> main
 
     def get_interested_formats(self) -> List[int]:
         """杂鱼♡～本喵对两种DIB格式都感兴趣喵～"""
@@ -82,13 +66,10 @@ class ImageHandler(BaseClipboardHandler[DIBData]):
         if not dib_data:
             return
 
-<<<<<<< HEAD
         # 杂鱼♡～在处理前，先用本喵的上下文缓存检查一下喵！～
         if self._is_duplicate_content(dib_data):
             return
 
-=======
->>>>>>> main
         bmp_data = self._convert_dib_to_bmp(dib_data)
         if not bmp_data or not bmp_data.success:
             self.logger.warning("DIB转BMP失败，跳过回调。")

@@ -28,7 +28,7 @@ class TextHandler(BaseClipboardHandler[str]):
 
     def get_interested_formats(self) -> List[int]:
         """杂鱼♡～本喵只对Unicode文本感兴趣喵～"""
-        return [ClipboardFormat.UNICODETEXT.value]
+        return [ClipboardFormat.CF_UNICODETEXT.value]
 
     def _calculate_hash(self, content: str) -> str:
         """杂鱼♡～计算文本内容的哈希值喵～"""

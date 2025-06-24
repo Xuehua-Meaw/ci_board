@@ -7,10 +7,7 @@ from typing import Callable, List, Optional
 
 from ci_board.interfaces import BaseClipboardHandler
 from ci_board.types import FileInfo, ProcessInfo
-<<<<<<< HEAD
 from ci_board.core.context_cache import ContextCache
-=======
->>>>>>> main
 from ci_board.utils import get_component_logger
 from ..utils.win32_api import ClipboardFormat, Win32API
 
@@ -21,28 +18,15 @@ logger = get_component_logger("handlers.file_handler")
 class FileHandler(BaseClipboardHandler[List[str]]):
     """杂鱼♡～专门处理文件的处理器喵～"""
 
-<<<<<<< HEAD
     def __init__(self, callback: Optional[Callable] = None, context_cache: Optional[ContextCache] = None):
-=======
-    def __init__(
-        self,
-        callback: Optional[Callable[[List[str], Optional[ProcessInfo]], None]] = None,
-    ):
->>>>>>> main
         """
         杂鱼♡～初始化文件处理器喵～
 
         Args:
-<<<<<<< HEAD
             callback: 处理文件列表的回调函数
             context_cache: 上下文缓存实例
         """
         super().__init__(callback, context_cache)
-=======
-            callback: 处理文件列表的回调函数, 接收 (files, source_info)
-        """
-        super().__init__(callback)
->>>>>>> main
 
     def is_valid(self, data: Optional[List[str]] = None) -> bool:
         """杂鱼♡～检查文件数据是否有效喵～"""
@@ -75,13 +59,10 @@ class FileHandler(BaseClipboardHandler[List[str]]):
         if not file_list:
             return
 
-<<<<<<< HEAD
         # 杂鱼♡～在处理前，先用本喵的上下文缓存检查一下喵！～
         if self._is_duplicate_content(file_list):
             return
 
-=======
->>>>>>> main
         if self._callback:
             try:
                 import inspect
