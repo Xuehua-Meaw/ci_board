@@ -8,12 +8,43 @@ from typing import Optional
 class ClipboardFormat(Enum):
     """杂鱼♡～剪贴板格式枚举喵～"""
 
-    TEXT = 1
-    BITMAP = 2
-    CF_DIB = 8
-    UNICODETEXT = 13
-    CF_DIBV5 = 17
-    HDROP = 15
+    # 杂鱼♡～基础文本格式喵～
+    CF_TEXT = 1         # 普通文本
+    CF_OEMTEXT = 7      # OEM文本
+    CF_UNICODETEXT = 13 # Unicode文本
+    CF_LOCALE = 16      # 区域文本
+    
+    # 杂鱼♡～图像和位图格式喵～
+    CF_BITMAP = 2     # 位图
+    CF_DIB = 8        # 设备无关位图
+    CF_DIBV5 = 17     # 设备无关位图V5
+    CF_PALETTE = 9    # 调色板
+    CF_TIFF = 6       # TIFF图像
+    
+    # 杂鱼♡～元文件格式喵～
+    CF_METAFILEPICT = 3 # 元文件
+    CF_ENHMETAFILE = 14 # 增强型元文件
+    
+    # 杂鱼♡～文件和数据格式喵～
+    CF_HDROP = 15      # 文件列表
+    CF_DIF = 5         # 数据交换格式
+    CF_SYLK = 4        # 符号链接
+    CF_RIFF = 11       # 资源互换文件格式
+    CF_WAVE = 12       # 音频文件
+    CF_PENDATA = 10    # 挂接数据
+    
+    # 杂鱼♡～显示格式喵～
+    CF_DSPTEXT = 0x0081         # 显示文本
+    CF_DSPBITMAP = 0x0082       # 显示位图
+    CF_DSPMETAFILEPICT = 0x0083 # 显示元文件
+    CF_DSPENHMETAFILE = 0x008E  # 显示增强型元文件
+    CF_OWNERDISPLAY = 0x0080    # 所有者显示
+    
+    # 杂鱼♡～范围定义喵～
+    CF_PRIVATEFIRST = 0x0200 # 私有范围开始
+    CF_PRIVATELAST = 0x02FF  # 私有范围结束
+    CF_GDIOBJFIRST = 0x0300  # GDI对象范围开始
+    CF_GDIOBJLAST = 0x03FF   # GDI对象范围结束
 
 
 class ClipboardError(Exception):

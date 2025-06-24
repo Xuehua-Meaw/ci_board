@@ -2,9 +2,14 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Generic, List, Optional, TypeVar
 
+<<<<<<< HEAD
 from ..core.context_cache import ContextCache
 from ..types.t_source import ProcessInfo
 from ..utils.logger import get_component_logger
+=======
+from ci_board.types import ProcessInfo
+from ci_board.utils import get_component_logger
+>>>>>>> main
 
 T = TypeVar("T")
 
@@ -43,16 +48,26 @@ class CallbackInterface(Generic[T], ABC):
 class BaseClipboardHandler(CallbackInterface[T]):
     """杂鱼♡～基础剪贴板处理器，提供通用功能喵～"""
 
+<<<<<<< HEAD
     def __init__(self, callback: Optional[Callable] = None, context_cache: Optional[ContextCache] = None):
+=======
+    def __init__(self, callback: Optional[Callable] = None):
+>>>>>>> main
         """
         杂鱼♡～初始化处理器喵～
 
         Args:
+<<<<<<< HEAD
             callback: 可选的回调函数
             context_cache: 可选的上下文缓存实例喵～
         """
         self._callback = callback
         self._context_cache = context_cache
+=======
+            callback: 可选的回调函数，现在接收(data, source_info)两个参数
+        """
+        self._callback = callback
+>>>>>>> main
         self._enabled = True
         self._include_source_info = True  # 杂鱼♡～默认包含源信息喵～
         self.logger = get_component_logger(
