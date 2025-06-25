@@ -1,6 +1,6 @@
 [project]
 name = "ci_board"
-version = "0.1.3"
+version = "0.1.4"
 authors = [
     { name="StanleyUKN", email="stanley09537000@gmail.com" },
 ]
