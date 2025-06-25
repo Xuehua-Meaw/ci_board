@@ -8,6 +8,12 @@ from .core.monitor import ClipboardMonitor
 from .handlers import FileHandler, ImageHandler, TextHandler
 from .interfaces import BaseClipboardHandler, CallbackInterface
 from .types import BMPData, DIBData, FileInfo, ProcessInfo
+# 杂鱼♡～导入图标提取功能喵～
+from .utils import (
+    extract_icon,
+    extract_icon_as_bytes,
+    save_icon_with_transparency_preview
+)
 
 __author__ = "Neko"
 __version__ = "0.1.3"  # 杂鱼♡～版本升级了喵！
@@ -73,4 +79,8 @@ __all__ = [
     "DIBData",
     "FileInfo",
     "ProcessInfo",
+    # 杂鱼♡～图标提取功能喵～
+    "extract_icon",
+    "extract_icon_as_bytes",
+    "save_icon_with_transparency_preview",
 ]

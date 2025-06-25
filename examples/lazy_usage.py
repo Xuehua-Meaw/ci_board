@@ -13,7 +13,7 @@ setup_ci_board_logging(
     console_level=LogLevel.WARNING
 )  # 杂鱼♡～可以改为LogLevel.INFO来减少输出喵～
 
-from ci_board import BMPData, ProcessInfo, create_monitor
+from ci_board import BMPData, ProcessInfo, create_monitor, extract_icon_as_bytes
 
 
 def on_text_change(text, source_info: ProcessInfo):
@@ -36,9 +36,9 @@ def on_image_change(bData: BMPData, source_info: ProcessInfo):
     # print(f"数据类型：{type(data)}")
     if bData.success:
         try:
-            # import io
+            import io
 
-            # from PIL import Image
+            from PIL import Image
 
             # image = Image.open(io.BytesIO(bData.data))
             # print(f"杂鱼♡～成功打开图片：{image.width} {image.height}喵～")
@@ -46,6 +46,10 @@ def on_image_change(bData: BMPData, source_info: ProcessInfo):
             print(f"杂鱼♡～BMPData尺寸：{bData.width}x{bData.height}喵～")
             # image.show()
             print(f"杂鱼♡～源应用程序信息：{source_info}")
+            icon = extract_icon_as_bytes(source_info.process_path)
+            image = Image.open(io.BytesIO(icon))
+            image.show()
+            
         except Exception as e:
             print(f"杂鱼♡～PIL打开失败喵：{e}")
     else:

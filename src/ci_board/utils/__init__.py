@@ -8,6 +8,12 @@ from .logger import (LogLevel, get_component_logger, get_logger,
 from .message_pump import MessagePump
 from .win32_api import (ClipboardAccessDenied, ClipboardError, ClipboardFormat,
                         ClipboardTimeout, Win32API, Win32Structures)
+# 杂鱼♡～导出图标提取功能喵～
+from .icon_extractor import (
+    extract_icon,
+    extract_icon_as_bytes,
+    save_icon_with_transparency_preview
+)
 
 __all__ = [
     # 杂鱼♡～核心API类喵～
@@ -27,4 +33,8 @@ __all__ = [
     "setup_ci_board_logging",
     "get_component_logger",
     "get_logger",
+    # 杂鱼♡～图标提取功能喵～
+    "extract_icon",
+    "extract_icon_as_bytes",
+    "save_icon_with_transparency_preview",
 ]
